@@ -1,4 +1,4 @@
-# Working Memory Modeling Toolbox 2019
+# Bayesian Modeling of Working Memory (BMW) Toolbox 2019
 
 ![](https://github.com/Mack-Ma/Bayesian_Modeling_of_Working_Memory/BMW_icon.png)
 
