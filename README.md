@@ -1,14 +1,14 @@
 # Bayesian Modeling of Working Memory (BMW) Toolbox   
 ### Ver. 2019
 
-![](https://github.com/Mack-Ma/Bayesian_Modeling_of_Working_Memory/BMW_icon.png)
+![](https://github.com/Mack-Ma/Bayesian_Modeling_of_Working_Memory/blob/master/BMW_icon.png)
 
 ### Prologue
-Given the huge changes in working memory computational models and the methodology of modeling these years, a new toolbox that could estimate, assess and comprehensively compare the new models using the state-of-the-art methods shall be in need. Bayesian Modeling of Working Memory (BMW) toolbox is working on this issue by establishing a pipeline that integrates model definition, model estimation, model comparison and visualization. All users could either finish all the job by GUI or by recruiting simple scripts.
+Given the huge changes in working memory computational models and the methodology of modeling these years, a new toolbox that could estimate, assess and comprehensively compare the new models using the state-of-the-art methods shall be fruitful. Bayesian Modeling of Working Memory (BMW) toolbox is working on this issue by establishing a pipeline that integrates model definition, model estimation, model comparison and visualization. All users could either finish all the job by GUI or by recruiting sample scripts.
 
 ### Pipeline
 
-![](https://github.com/Mack-Ma/Bayesian_Modeling_of_Working_Memory/pipeline.png)  
+![](https://github.com/Mack-Ma/Bayesian_Modeling_of_Working_Memory/blob/master/pipeline.png)  
 
 - Fit Models by Maximum Likelihood (MLE)
 - Available Methods for Model Comparison
