@@ -1,13 +1,13 @@
 # Working Memory Modeling Toolbox 2019
 
-![]()
+![https://github.com/Mack-Ma/Bayesian_Modeling_of_Working_Memory/BMW_icon.png]()
 
 ### Prologue
 Given the huge changes in working memory computational models and the methodology of modeling these years, a new toolbox that could estimate, assess and comprehensively compare the new models using the state-of-the-art methods shall be in need. Bayesian Modeling of Working Memory (BMW) toolbox is working on this issue by establishing a pipeline that integrates model definition, model estimation, model comparison and visualization. All users could either finish all the job by GUI or by recruiting simple scripts.
 
 ### Pipeline
 
-![]()  
+![https://github.com/Mack-Ma/Bayesian_Modeling_of_Working_Memory/pipeline.png]()  
 
 - Fit Models by Maximum Likelihood (MLE)
 - Available Methods for Model Comparison
@@ -27,7 +27,8 @@ Given the huge changes in working memory computational models and the methodolog
 		- Equal Precision
 		- Variable Precision
 		- Variable Precision with Capacity
-		- Categorical Slots-plus-Averaging
+		- Categorical Slots-plus-Averaging   
+		(Categorical encoding will appear as model variant in the future release)
 		- Categorical Variable Precision
 		- Categorical Variable Precision with Capacity
 		- Model Variants: Bias/Swap/Bias Fluctuation/Precision Fluctuation
