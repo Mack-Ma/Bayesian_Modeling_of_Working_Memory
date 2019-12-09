@@ -86,8 +86,8 @@ if Input.Derivatives.Swap==1
     errors_nt=Data.error_nt;
     errors_nt_c=Data.error_nt_c;
 end
-kappa_max=700; % Computational limit
-SampleSeed=1000; % Monte Carlo seed
+kappa_max=500; % Computational limit
+SampleSeed=1000*Nparam; % Monte Carlo seed
 
 % LH function
 p_error=zeros(length(SS_range),length(error_range),1);

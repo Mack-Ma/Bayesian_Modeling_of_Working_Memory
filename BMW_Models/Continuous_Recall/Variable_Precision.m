@@ -113,7 +113,7 @@ if Input.Derivatives.Swap==1
         samples_nt=Data.sample_nt;
     end
 end
-kappa_max=700; % Computational limit
+kappa_max=500; % Computational limit
 SampleSeed=1000*Nparam; % Monte Carlo seed
 
 % LH function

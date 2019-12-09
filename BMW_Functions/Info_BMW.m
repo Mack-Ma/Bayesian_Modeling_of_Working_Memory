@@ -63,12 +63,12 @@ else
         case 'Variable Precision'
             Info.ParamInfo='Variable Precision: kappa1_bar (mean precision at set size 1), tau, power , kappa_r (motor noise)';
             Info.start=[50, 1, 1, 50];
-            Info.ub=[700, 7, 7, 700];
-            Info.lb=[1e-7, 1e-7, 1e-7, 1e-7];
+            Info.ub=[700, 500, 10, 700];
+            Info.lb=[0, 0, 0, 0];
         case 'Variable Precision with Capacity'
             Info.ParamInfo='Variable Precision with Capacity: kappa1_bar (mean precision at set size 1), tau, power (precision decay rate), kappa_r (motor noise), K (capacity)';
             Info.start=[50, 1, 1, 50, 2];
-            Info.ub=[700, 7, 7, 700, 20];
+            Info.ub=[700, 500, 10, 700, 20];
             Info.lb=[0, 0, 0, 0, 0];
         case 'Categorical Slots-plus-Averaging'
             Info.ParamInfo='Categorical Slots-plus-Averaging: K (capacity), kappa_1 (unit precision), kappa_r (motor noise), kappa_c(categorical precision), p_c(categorical memory rate)';
@@ -78,12 +78,12 @@ else
         case 'Categorical Variable Precision'
             Info.ParamInfo='Categorical Variable Precision: kappa1_bar (mean precision at set size 1), tau, power (precision decay rate), kappa_r (motor noise), kappa_c (categorical precision), p_c(categorical memory rate)';
             Info.start=[50, 1, 1, 50, 50, .3];
-            Info.ub=[700, 7, 7, 700, 700, 1];
+            Info.ub=[700, 500, 10, 700, 700, 1];
             Info.lb=[0, 0, 0, 0, 0, 0];
         case 'Categorical Variable Precision with Capacity'
             Info.ParamInfo='Categorical Variable Precision with Capacity: kappa1_bar (mean precision at set size 1), tau, power (precision decay rate), kappa_r (motor noise), K (capacity), kappa_c (categorical precision), p_c(categorical memory rate)';
             Info.start=[50, 1, 1, 50, 2, 50, .3];
-            Info.ub=[700, 7, 7, 700, 20, 700, 1];
+            Info.ub=[700, 500, 10, 700, 20, 700, 1];
             Info.lb=[0, 0, 0, 0, 0, 0, 0];
         case 'Fixed-Capacity (Full-Display)'
             Info.ParamInfo='Fixed-Capacity: K(capacity), g(guess)';

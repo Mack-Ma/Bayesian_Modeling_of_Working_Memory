@@ -36,10 +36,10 @@ Data.error_range=-89:1:90;
 Data.error=0;
 Data.SS=ones(length(Data.error),1);
 Input.PDF=1; % Switch on pdf mode
-tau_range=[0.001, 0.5:0.5:5]; % Range of resource allocation variability
-kappa_range=[1 10 25 75 150]; % Range of mean precision at set size 1
+tau_range=100:10:300; % Range of resource allocation variability
+kappa_range=[100 150 200 250]; % Range of mean precision at set size 1
 power=2;
-kappa_r=150;
+kappa_r=125;
 % Generate data
 for set=1:Nset
     flag_tau=0;

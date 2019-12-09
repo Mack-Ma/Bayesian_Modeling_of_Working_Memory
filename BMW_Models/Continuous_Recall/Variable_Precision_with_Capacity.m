@@ -97,8 +97,8 @@ if Input.Derivatives.Swap==1
         samples_nt=Data.sample_nt;
     end
 end
-kappa_max=700; % Computational limit
-SampleSeed=1000; % Monte Carlo seed
+kappa_max=500; % Computational limit
+SampleSeed=1000*Nparam; % Monte Carlo seed
 
 % LH function
 kappa0_bar=exp(log(kappa1_bar)*(cosd(4*sample_range)).^precF);
