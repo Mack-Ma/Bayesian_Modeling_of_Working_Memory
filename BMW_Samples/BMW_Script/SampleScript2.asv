@@ -3,6 +3,7 @@
 % Simulate continuous recall data based on Variable Precision model
 % ------------
 % Sample script for BMW toolbox
+% Circular Statistics Toolbox is needed for calculating circular sd
 % For detailed instruction of this script, please refer to the manual (type BMW('Manual')).
 % ------------
 % Programmed by Ma, Tianye
@@ -20,8 +21,8 @@ close all
 clear variables
 SimModel='Variable Precision'; % The model for simulation
 % Load toolbox
-addpath('Your BMW Toolbox Path')
-BMW('Silent'); % Add subfolders
+% addpath('Your BMW Toolbox Path')
+% BMW('Silent'); % Add subfolders
 
 % Configuration
 Nset=10; % # of datasets per condition
@@ -36,7 +37,7 @@ Data.error=0;
 Data.SS=ones(length(Data.error),1);
 Input.PDF=1; % Switch on pdf mode
 tau_range=100:20:300; % Range of resource allocation variability
-kappa_range=[100 200 300]; % Range of mean precision at set size 1
+kappa_range=[200 250]; % Range of mean precision at set size 1
 power=2;
 kappa_r=125;
 % Generate data
@@ -67,14 +68,15 @@ for set=1:Nset
     fprintf('\nDataset %d finished.\n',set)
 end
 
-%% Circular SD
+%% Fit
+% Circular SD
 CSD=zeros(Nset,length(tau_range),length(kappa_range),length(SS_range));
 for set=1:Nset
     for tau=1:length(tau_range)
         for kappa=1:length(kappa_range)
             for SS=1:length(SS_range)
                 data=Dataset{set}{tau,kappa}.Data;
-                CSD(set,tau,kappa,SS)=CircSummary_BMW('CircSD',data(:,SS),180); % Note that the period should be revised accordingly
+                CSD(set,tau,kappa,SS)=CircSummary_BMW('H',data(:,SS),180);
             end
         end
     end
@@ -90,10 +92,9 @@ for SS=1:length(SS_range)
         errorbar(tau_range,mean(data),std(data))
     end
 end
-
 %% Epilogue
-% Save
-cd('Your save directory') % cd to the directory where you gonna save the results
-save('Your Filename') % Save all variables
-% Remove paths
-rmpath('Your BMW Toolbox Path')
+% % Save
+% cd('Your save directory') % cd to the directory where you gonna save the results
+% save('Your Filename') % Save all variables
+% % Remove paths
+% rmpath('Your BMW Toolbox Path')
