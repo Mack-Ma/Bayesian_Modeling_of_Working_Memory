@@ -79,7 +79,7 @@ elseif strcmp(FitOptions.Algorithm,'BADS')
         if ~isfield(FitOptions,'badsOptions')
             FitOptions.badsOptions=bads('defaults');
         end
-        eval(['[Param_Mack, LLH_Mack, Exitflag, Output] = bads(@(Param)' Model, '(Param, Data, Config), Constraints.start, Constraints.lb, Constraints.ub, [], [], [], FitOptions.badsOptions);'])
+        eval(['[Param_Mack, LLH_Mack, Exitflag, Output] = bads(@(Param)' Model, '(Param, Data, Config), Constraints.start, Constraints.lb, Constraints.ub, Constraints.lb, Constraints.ub, [], FitOptions.badsOptions);'])
         
 elseif strcmp(FitOptions.Algorithm,'MADS')
         %% mads

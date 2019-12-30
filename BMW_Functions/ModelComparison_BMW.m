@@ -4,6 +4,7 @@
 % Write results in the MC_BMW file
 % -----------------------
 % [MC_BMW]=ModelComparison_BMW(Input)
+%
 % ## Input ##
 % Input.MS: cell array of results of model assessment/ directories of MA_BMW.mat
 % Input.Criterion, (Input.MN, Input.OutputDir)

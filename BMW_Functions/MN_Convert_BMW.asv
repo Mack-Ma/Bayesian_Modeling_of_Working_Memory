@@ -33,7 +33,7 @@ Name=List_Name(ismember(List_Name0,Name0));
 if isempty(Name)
     Name=Name0;
 else
-    Name=cell2mat(Name);
+    
 end
 
 end

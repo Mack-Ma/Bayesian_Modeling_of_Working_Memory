@@ -8,7 +8,7 @@
 % e.g. 'Criteria'/'Fit Options'
 % When Q is assigned as a structural array, it should represent the model
 % of interest. 
-% e.g. Q.Model='Item Limit', Q.Derivatives.Swap=1;
+% e.g. Q.Model='Item Limit', Q.Variants.Swap=1;
 % - Data: Data file recruited to estimated the model.
 % For the structure of Data, please refer to ModelDefinition_BMW.m 
 % ------------
@@ -101,29 +101,29 @@ else
             Info.ub=[20, 1];
             Info.lb=[0, 0];
     end
-    if isfield(Q.Derivatives, 'Bias')
-        switch Q.Derivatives.Bias
+    if isfield(Q.Variants, 'Bias')
+        switch Q.Variants.Bias
             case 1
                 Info.ParamInfo=[Info.ParamInfo, ', mu(bias)'];
                 Info.start=[Info.start, 0];
                 Info.ub=[Info.ub, 90];
                 Info.lb=[Info.lb, -90];
         end
-        switch Q.Derivatives.BiasF
+        switch Q.Variants.BiasF
             case 1
                 Info.ParamInfo=[Info.ParamInfo, ', muf(bias fluctuation)'];
                 Info.start=[Info.start, 0];
                 Info.ub=[Info.ub, 90];
                 Info.lb=[Info.lb, -90];
         end
-        switch Q.Derivatives.PrecF
+        switch Q.Variants.PrecF
             case 1
                 Info.ParamInfo=[Info.ParamInfo, ', kappa_f(precision fluctuation)'];
                 Info.start=[Info.start, 0];
                 Info.ub=[Info.ub, 6];
                 Info.lb=[Info.lb, -6];
         end
-        switch Q.Derivatives.Swap
+        switch Q.Variants.Swap
             case 1
                 Info.ParamInfo=[Info.ParamInfo, ', b(swap rate)'];
                 Info.start=[Info.start, 0.1];
@@ -131,15 +131,15 @@ else
                 Info.lb=[Info.lb, 0];
         end
     end
-    if isfield(Q.Derivatives, 'Lapse') || isfield(Q.Derivatives, 'Ensemble')
-        switch Q.Derivatives.Lapse
+    if isfield(Q.Variants, 'Lapse') || isfield(Q.Variants, 'Ensemble')
+        switch Q.Variants.Lapse
             case 1
                 Info.ParamInfo=[Info.ParamInfo, ', a(lapse rate)'];
                 Info.start=[Info.start, 0.1];
                 Info.ub=[Info.ub, 1];
                 Info.lb=[Info.lb, 0];
         end
-        switch Q.Derivatives.Ensemble
+        switch Q.Variants.Ensemble
             case 1
                 Info.ParamInfo=[Info.ParamInfo, ', e(rate of ensemble encoding)'];
                 Info.start=[Info.start, 0.1];

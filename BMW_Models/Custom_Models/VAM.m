@@ -1,17 +1,21 @@
-%% Generalized Context Model
+%% Varying Abstraction Model
 %
-% LLH function of Generalized Context Model(GCM)
+% Likelihood function of Varying Abstraction Model(VAM)
 % ------------
 % ## Input ##
 % - param
 % w(:) (dimension weights), c (sensory scaling)
-% (y (response scaling))
+% (y (response scaling), a (memory strength))
 % - Data
-% Data.exemplar (#exemplar-by-dimension), Data.exemplar_category (#category of exemplars)
+% Data.instance (#instance-by-dimension), Data.instance_category (#category of instances)
 % Data.response (reported category in each trial (#trial-by-dimension)),
 % Data.sample (sample in each trial (#trial-by-dimension))
 % - Input
-% Input.Derivatives.Response (Response scaling)
+% Input.Variants.Response (response scaling)
+% Input.Variants.Strength (memory strength)
+% 
+% ## Reference ##
+%
 % ------------
 % Programmed by Ma, Tianye
 % Under the instruction of Dr. Ku, Yixuan
@@ -22,25 +26,30 @@
 % BMW toolbox: https://github.com/Mack-Ma/Bayesian_Modeling_of_Working_Memory
 %
 
-function LLH=GCM(param, Data, Input)
+function LLH=VAM(param, Data, Input)
 % Specify parameters
 Nw=size(Data.sample,2); % Number of dimensions
 w=param(1:Nw); % Weights
 c=param(Nw+1); % Sensory scaling parameter
 Nparam=Nw+1;
-if isfield(Input,'Derivatives')
-    if isfield(Input.Derivatives,'Response') && Input.Derivatives.Response==1;
+if isfield(Input,'Variants')
+    if isfield(Input.Variants,'Response') && Input.Variants.Response==1;
         y=param(Nparam+1); % Response scaling parameter
     else
         y=1;
+    end
+    if isfield(Input.Variants,'Strength') && Input.Variants.Strength==1;
+        a=param(Nparam+1); % memory strenth
+    else
+        a=1;
     end
 end
 
 % Configuration
 samples=Data.sample;
 sample_range=unique(samples,'rows');
-E=Data.exemplar;
-E_category=Data.exemplar_category; % Categories (1~N)
+E=Data.instance;
+E_category=Data.instance_category; % Categories (1~N)
 responses=Data.response; % 1~N
 Nc=length(unique(E_category)); % # of categories
 

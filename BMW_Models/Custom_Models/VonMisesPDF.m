@@ -8,7 +8,7 @@
 % - Data
 % Data.error (response-sample), Data.error_range
 % - Input
-% Input.Derivatives (options of derivatives)
+% Input.Variants (options of Variants)
 %
 % ## Output ##
 % Summed log Likelihood
@@ -27,7 +27,7 @@ function LLH=VonMisesPDF(param, Data, Input)
 
 % Specify parameters
 kappa=param(1);
-if isfield(Input.Derivatives, 'Bias') && Input.Derivatives.Bias==0
+if isfield(Input.Variants, 'Bias') && Input.Variants.Bias==0
     bias=0; % Responses concentrate on samples
 else
     bias=param(2);

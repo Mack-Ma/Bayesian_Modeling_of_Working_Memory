@@ -36,7 +36,7 @@ for i=1:Nmodel
     % Specify model
     Config_MA.Model.Model=ModelSpace{i};
     % Model Variants
-    Config_MA.Model.Derivatives.Bias=0; % Deprecate bias here (bias=0)
+    Config_MA.Model.Variants.Bias=0; % Deprecate bias here (bias=0)
     % Model definition
     MA=ModelDefinition_BMW(Config_MA);
     Config_MA.Criteria.Default=1;
@@ -66,7 +66,7 @@ end
 
 %% Epilogue
 % Save
-cd('Your save directory') % cd to the directory where you gonna save the results
+cd('Your save directory') % cd to the directory where you‘re gonna save the results
 save('Your Filename') % Save all variables
 % Remove paths
 rmpath('Your BMW Toolbox Path')

@@ -19,7 +19,7 @@
 close all
 clear variables
 ModelSpace={'Item Limit', 'Standard Mixture', 'Slots-plus-Averaging', 'Equal Precision', 'Variable Precision', 'Variable Precision with Capacity',...
-    'Categorical Slots-plus-Averaging', 'Categorical Variable Precision', 'Categorical Variable Precision with Capacity'};
+    'Categorical Slots-plus-Averaging', 'Categorical Variable Precision', 'Categorical Variable Precision with Capacity'}; % Full model space
 Nmodel=length(ModelSpace);
 % Load toolbox
 addpath('Your BMW Toolbox Path')
@@ -36,11 +36,11 @@ for i=1:Nmodel
     Config_MA.Data=Data;
     % Specify model
     Config_MA.Model.Model=ModelSpace{i};
-    % Set derivatives
-    Config_MA.Model.Derivatives.Swap=1; % Swap rate
-    Config_MA.Model.Derivatives.PrecF=0; % Fluctuation of precision
-    Config_MA.Model.Derivatives.BiasF=0; % Fluctuation of bias
-    Config_MA.Model.Derivatives.Bias=0; % Bias
+    % Set Variants
+    Config_MA.Model.Variants.Swap=1; % Swap rate
+    Config_MA.Model.Variants.PrecF=0; % Fluctuation of precision
+    Config_MA.Model.Variants.BiasF=0; % Fluctuation of bias
+    Config_MA.Model.Variants.Bias=0; % Bias
     % Model definition
     MA=ModelDefinition_BMW(Config_MA);
 %     Config_MA.Criteria.LLH=1; % Assign 1 to calculate log likelihood

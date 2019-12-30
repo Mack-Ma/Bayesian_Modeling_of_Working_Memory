@@ -31,7 +31,7 @@ Ntrial=3000; % # of trials per dataset per set size
 Dataset=cell(1,Nset); % Pre-allocation
 SS_range=[1 3]; % Range of set size
 % Generate pdf
-Data.error_range=-89:1:90;
+Data.error_range=-89:1:90; % Axial data
 Data.error=0;
 Data.SS=ones(length(Data.error),1);
 Input.PDF=1; % Switch on pdf mode

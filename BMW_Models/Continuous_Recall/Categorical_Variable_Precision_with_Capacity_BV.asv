@@ -82,11 +82,6 @@ end
 % Configuration
 errors=Data.error;
 error_range=Data.error_range;
-if length(error_range)==2
-    continuous=1;
-else
-    continuous=0;
-end
 SS=Data.SS;
 SS_range=unique(SS);
 errors_c=Data.error_c;
@@ -123,8 +118,7 @@ if continuous==1
                 (K/N)*((1-p_c)*besseli0_fast(conv_kappa)./(2*pi*besseli0_fast(kappa(:,SS_range==N))*besseli0_fast(kappa_r))+...
                 p_c*besseli0_fast(conv_1_c)./(2*pi*besseli0_fast(kappa_c)*besseli0_fast(kappa_r)));
         else
-            p_error0(:,i_error)=(1-p_c)*besseli0_fast(conv_kappa)./(2*pi*besseli0_fast(kappa(:,SS_range==N))*besseli0_fast(kappa_r))+...
-                p_c*besseli0_fast(conv_1_c)./(2*pi*besseli0_fast(kappa_c)*besseli0_fast(kappa_r));
+            p_error0(:,i_error)=besseli0_fast(conv_kappa)./(2*pi*besseli0_fast(kappa(:,SS_range==N,i_error))*besseli0_fast(kappa_r));
         end
         
         if Input.Variants.Swap==1
@@ -154,7 +148,7 @@ if continuous==1
             end
         end
     end
-    p_T=(1-s)*mean(p_error0,1);
+    p_T=(1-s)*((1-p_c)*mean(p_error0,1)+p_c*p_error_c);
     p_NT=s*mean(p_error0_NT,1);
     p_LH=p_T+p_NT;
     

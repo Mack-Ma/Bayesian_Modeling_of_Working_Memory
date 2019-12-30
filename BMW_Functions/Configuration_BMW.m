@@ -40,7 +40,7 @@ if isfield(Input.Criteria,'Default') && Input.Criteria.Default==1
     Input.Criteria=Info_BMW('Criteria'); end
 if isfield(Input.Constraints,'Default') && Input.Constraints.Default==1
     QModel.Model=MA_BMW.Model.Model;
-    QModel.Derivatives=MA_BMW.Model.Derivatives;
+    QModel.Variants=MA_BMW.Model.Variants;
     Input.Constraints=Info_BMW(QModel, MA_BMW.Data);
 end
 % Output

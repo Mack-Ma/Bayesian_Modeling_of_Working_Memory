@@ -7,7 +7,7 @@
 % - Stat
 % A string that specifies the output, potential choices are,
 %       'Mean', mean resultant vector direction in degree
-%       'NormSD', normal standard deviation based on circular deviation
+%       'NormSD', normal standard deviation based on circular difference
 %       'Moment', 1st trigonometric moment about the zero direction
 %       'AngVar', circular variance
 %       'AngDev', mean angular deviation

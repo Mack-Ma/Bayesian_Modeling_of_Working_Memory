@@ -2,6 +2,8 @@
 %
 % Define models and output MA_BMW.mat file
 % -----------------------
+% [MA_BMW]=ModelDefinition_BMW(Input)
+%
 % ## Input ##
 % Data/Output Dir, Information regarding the model of interest
 % ## Output ##
