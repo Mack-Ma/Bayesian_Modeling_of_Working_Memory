@@ -257,8 +257,8 @@ function p=prior(param, Input, Nkappa)
 K=param(1); % Capacity
 % weibull prior for capacity
 p0(1)=wblpdf(K,3.5,3); % given that K is ofter 3~4
-kappa_SS=param(2:1+Nkappa); % Response variability
-% Gamma prior for response noise
+kappa_SS=param(2:1+Nkappa); % precision
+% Gamma prior for precision
 p0(2:1+Nkappa)=gampdf(kappa_SS,3,10);
 Nparam=Nkappa+1;
 if ~isfield(Input,'Variants') % No Variants

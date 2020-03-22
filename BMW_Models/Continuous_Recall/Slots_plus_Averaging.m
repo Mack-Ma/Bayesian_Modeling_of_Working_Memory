@@ -282,9 +282,8 @@ kappa_1=param(2); % Unit resource
 % Gamma prior for unit resource
 p0(2)=gampdf(kappa_1,3,5);
 kappa_r=param(3); % Response variability
-% Cauchy prior for response noise
-% copy-paste from MemToolbox here
-p0(3)=2/(pi+kappa_r.^2);
+% Gamma prior for response noise
+p0(3)=gampdf(kappa_r,3,5);
 Nparam=3;
 if ~isfield(Input,'Variants') % No Variants
     Input.Variants.Bias=0;

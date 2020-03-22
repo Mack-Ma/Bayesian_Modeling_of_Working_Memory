@@ -1,13 +1,17 @@
-%% Monte Carlo Markov Chain
+%% Get ICs based on posterior samples
 %
-% Sampling by Monte Carlo Markov Chain Algorithm (Adaptive Metropolis-Hastings/Differential Evolution)
+% Get the criterion of interest based on MCMC outputs
 %
 % -----------------------
 % IC=Mack_GetIC_MCMC(Samples, Model, Data, Method)
 %
 % ## Input ##
-% - model
-%   struct, contains the name of the model of interest
+% - Samples
+%   mat, contains posterior samples
+%   help Mack_MCMC for details
+%
+% - Model
+%   struct, configures the model
 %   Type BMW('models') for the list of available models.
 %       ~.Model
 %           string, contains the name of the model of interest
@@ -19,45 +23,37 @@
 %       ~.Variants
 %           e.g. model.Variants.Bias==1;
 %           See manual for details.
-% - data
+%
+% - Data
 %   mat, the data variable that qualifies the simulation.
 %   Type BMW('manual') for detailed requirements.
 %
-% - config
-%   config.Algorithm
-%       string, 'DE'/'MH', use 'DE' as default
-%   config.MCMCparam
-%       vector, configures the sampling
-%       If we use 'DE', then the length of the vector should be two
-%       and the elements stand for [gamma, eps] in order.
-%           gamma, scaling factor of the between-chain difference vector
-%           eps, the range of the uniform jitter
-%       If we use 'MH', then the length should be three and the elements
-%       should stand for [Sd, t0] in order.
-%   config.Convergence
-%       ~.Diagnostic
-%           string, controls the method of convergence diagnostic, default as 'GR'
-%           Available methods include 'GR' & 'GRL'
-%       ~.Nbatchburnin
-%           integer, designates the number of burn-in samples in each batch
-%           of sampling
-%       ~.Nmaxbatchburnin
-%           integer, designates the max quantity of burn-in batches
-%   config.Verbosity
-%       string, 'off'/'iter'/'notify'/'final', default as 'iter'
-%       controls the level of display during sampling
+% - Method
+%   string, designates the method to compare models
+%       'DIC', Deviance Information Criterion
+%       'DIC*', modified Deviance Information Criterion, which gives a larger
+%       penalty on model complexity than DIC
+%       'WAIC1', Watanabe-Akaike Information Criterion, which uses the 
+%       difference between pointwise mean deviance and pointwise deviance 
+%       of mean as penalty
+%       'WAIC2', Watanabe-Akaike Information Criterion, which uses the
+%       sum of the pointwise variance of likelihood as penalty
+%       'LME_HarmonicMean', log model evidence, calculated by the general
+%       harmonic mean estimator
+%       'LME_BridgeSampling', log model evidence, calculated by bridge
+%       sampling
 %
 % ## Output ##
-% - RawSampling
-% - Summary
+% - IC
+% float, return the information criterion of interest
 %
 % ## Reference ##
-% -
+% - 
 % -----------------------
 % Programmed by Ma, Tianye
 % Under the instruction of Dr. Ku, Yixuan
 % Memory, Attention & Cognition (MAC) Lab,
-% 3/3/2020
+% 3/22/2020
 %
 % Bug reports or any other feedbacks please contact M.T. (mack_ma2018@outlook.com)
 % BMW toolbox:
@@ -108,8 +104,36 @@ switch Method.IC
         pD=MDev-DevM;
         % DIC*
         IC=MDev+2*pD;
-    case 'WAIC' % get watanabe-akaike information criterion
-        
+    case 'WAIC1' % get watanabe-akaike information criterion
+        % get log pointwise predictive density
+        Model.Output='LPPD';
+        eval(['lppd1=',Model.Model,'(Samples(1,:),Data,Model);'])
+        Ntrial=length(lppd1);
+        lppd=zeros(Nsample,Ntrial);
+        lppd(1,:)=lppd1;
+        for i=2:Nsample
+            eval(['lppd(i,:)=',Model.Model,'(Samples(i,:),Data,Model);'])
+        end
+        lppd=mean(log(mean(exp(lppd),1)));
+        % get penalty
+        p_waic1=2*mean(log(mean(exp(lppd),1))+mean(lppd,1));
+        % WAIC
+        IC=lppd-p_waic1;
+    case 'WAIC2' % get watanabe-akaike information criterion
+        % get log pointwise predictive density
+        Model.Output='LPPD';
+        eval(['lppd1=',Model.Model,'(Samples(1,:),Data,Model);'])
+        Ntrial=length(lppd1);
+        lppd=zeros(Nsample,Ntrial);
+        lppd(1,:)=lppd1;
+        for i=2:Nsample
+            eval(['lppd(i,:)=',Model.Model,'(Samples(i,:),Data,Model);'])
+        end
+        lppd=mean(log(mean(exp(lppd),1)));
+        % get penalty
+        p_waic2=sum(var(lppd));
+        % WAIC
+        IC=lppd-p_waic2;
     case 'LME-HarmonicMean' % get log model evidence (marginal likelihood) through the generalized harmonic mean estimator
         if Method.Verbosity==1;
             fprintf('\n Now estimate marginal likelihood based on the generalized harmonic mean estimator... \n')
