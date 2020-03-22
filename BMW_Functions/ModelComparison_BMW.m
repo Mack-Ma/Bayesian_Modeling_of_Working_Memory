@@ -66,7 +66,8 @@ switch Input.Criterion
                 end
             end
             LLH_GLR=LLH_GLR.*(exp(LLH_models(subj,:))'*(ones(1,Nmodel)./exp(LLH_models(subj,:))));
-            LLH_BestModel(subj)=find(LLH_models(subj,:)==max(LLH_models(subj,:)));
+            LLH_BestModel_0=find(LLH_models(subj,:)==max(LLH_models(subj,:)));
+            LLH_BestModel(subj)=LLH_BestModel_0(1);
         end
         MC_BMW.LLH.BestModel=LLH_BestModel;
         MC_BMW.LLH.LLH_GLR=LLH_GLR;
@@ -91,14 +92,15 @@ switch Input.Criterion
                 AIC_weight(model1,subj)=exp(-delta_AIC_benchmark(model1)/2)/sum(exp(-delta_AIC_benchmark/2));
             end
             AIC_GLR=AIC_GLR.*(AIC_weight(:,subj)*(ones(Nmodel,1)./AIC_weight(:,subj))');  % (1,2) = Models1/Model2
-            AIC_BestModel(subj)=find(AIC_models(subj,:)==min(AIC_models(subj,:)));
+            AIC_BestModel_0=find(AIC_models(subj,:)==min(AIC_models(subj,:)));
+            AIC_BestModel(subj)=AIC_BestModel_0(1);
         end
         MC_BMW.AIC.BestModel=AIC_BestModel;
         MC_BMW.AIC.AIC_GLR=AIC_GLR;
         MC_BMW.AIC.delta_AIC=delta_AIC;
         MC_BMW.AIC.AIC_weight=AIC_weight;
         % 2nd Level RFX-BMS
-        BMC_Results=Mack_BMC(-AIC_models', Opt_BMC);
+        BMC_Results=Mack_BMC(-AIC_models'/2, Opt_BMC);
         MC_BMW.AIC.ModelFreq=BMC_Results.r;
         MC_BMW.AIC.EP=BMC_Results.EP;
     case 'AICc'
@@ -117,14 +119,15 @@ switch Input.Criterion
                 AICc_weight(model1,subj)=exp(-delta_AICc_benchmark(model1)/2)/sum(exp(-delta_AICc_benchmark/2));
             end
             AICc_GLR=AICc_GLR.*(AICc_weight(:,subj)*(ones(Nmodel,1)./AICc_weight(:,subj))');
-            AICc_BestModel(subj)=find(AICc_models(subj,:)==min(AICc_models(subj,:)));
+            AICc_BestModel_0=find(AICc_models(subj,:)==min(AICc_models(subj,:)));
+            AICc_BestModel(subj)=AICc_BestModel_0(1);
         end
         MC_BMW.AICc.BestModel=AICc_BestModel;
         MC_BMW.AICc.AICc_GLR=AICc_GLR;
         MC_BMW.AICc.delta_AICc=delta_AICc;
         MC_BMW.AICc.AICc_weight=AICc_weight;
         % 2nd Level RFX-BMS
-        BMC_Results=Mack_BMC(-AICc_models', Opt_BMC);
+        BMC_Results=Mack_BMC(-AICc_models'/2, Opt_BMC);
         MC_BMW.AICc.ModelFreq=BMC_Results.r;
         MC_BMW.AICc.EP=BMC_Results.EP;
     case 'BIC'
@@ -144,14 +147,15 @@ switch Input.Criterion
                 BIC_PPr(model1,subj)=exp(-delta_BIC_benchmark(model1)/2)/sum(exp(-delta_BIC_benchmark/2));
             end
             BIC_GBF=BIC_GBF.*(BIC_PPr(:,subj)*(ones(Nmodel,1)./BIC_PPr(:,subj))');
-            BIC_BestModel(subj)=find(BIC_models(subj,:)==min(BIC_models(subj,:)));
+            BIC_BestModel_0=find(BIC_models(subj,:)==min(BIC_models(subj,:)));
+            BIC_BestModel(subj)=BIC_BestModel_0(1);
         end
         MC_BMW.BIC.BestModel=BIC_BestModel;
         MC_BMW.BIC.BIC_GBF=BIC_GBF;
         MC_BMW.BIC.delta_BIC=delta_BIC;
         MC_BMW.BIC.BIC_PPr=BIC_PPr;
         % 2nd Level RFX-BMS
-        BMC_Results=Mack_BMC(-BIC_models', Opt_BMC);
+        BMC_Results=Mack_BMC(-BIC_models'/2, Opt_BMC);
         MC_BMW.BIC.ModelFreq=BMC_Results.r;
         MC_BMW.BIC.EP=BMC_Results.EP;
     case 'DIC'

@@ -1,8 +1,8 @@
 %% Variable Precision with Capacity
 %
-% Log Likelihood function of the Variable Precision with Capacity model
+% Define the Variable Precision with Capacity model
 % ------------
-% LLH=Variable_Precision_with_Capacity(param, Data, Input)
+% Output=Variable_Precision_with_Capacity(param, Data, Input)
 %
 % ## Theory ##
 % This model assumed that there's a fixed, discrete, item-based capacity limit and
@@ -13,16 +13,34 @@
 % the shape parameter follows Gamma distribution.
 %
 % ## Input ##
+% check the manual for details (BMW('manual'))
+%
 % - param
-% kappa_1, tau, power, kappa_r, K, (bias, biasF, s)
+% kappa1_bar, tau, (power,) kappa_r, K, (bias, biasF, precF, s)
+%
 % - Data
 % Data.error (response-sample), Data.SS (set size)
 % (Data.sample_range, Data.sample, Data.error_nt, Data.sample_nt)
+%
 % - Input
-% Input.Variants (options of Variants), Input.PDF
+% Input.Variant
+%   options of model variants
+%       Input.Variants.Bias, 0/1 to decide whether consider representational
+%       shift/response bias
+%       Input.Variants.Swap, 0/1 to decide whether use swap variants
+%       Input.Variants.BiasF, 0/1 to decide whether consider a cosine-shaped
+%       fluctuation of representational shift/response bias
+% Input.Output
+%   string, choose output mode
+%       'Prior', only output prior density
+%       'LLH', output log likelihood
+%       'LP', output log posterior density
+% Input.PDF
+%   0/1, output pdf or not. default as 0
+%   Valid only when Input.Output=='LLH'
 %
 % ## Output ##
-% Summed log Likelihood
+% Output is conditional to Input.Output & Input.PDF
 %
 % ## Reference ##
 % - van den Berg, R., Shin, H., Chou, W. C., George, R., & Ma, W. J. (2012).
@@ -47,10 +65,11 @@
 % BMW toolbox: https://github.com/Mack-Ma/Bayesian_Modeling_of_Working_Memory
 %
 
-function LLH=Variable_Precision_with_Capacity(param, Data, Input)
+function Output=Variable_Precision_with_Capacity(param, Data, Input)
 
 kappa1_bar=param(1); % Precision at set size 1
 tau=param(2); % Resource allocation variability
+if tau==0, tau=1e-6; end;
 Nparam=2;
 SS=Data.SS;
 SS_range=unique(SS);
@@ -64,6 +83,12 @@ Nparam=Nparam+1;
 kappa_r=param(Nparam); % Response variability
 Nparam=Nparam+1;
 K=param(Nparam); % Capacity
+if ~isfield(Input,'Variants') % No Variants
+    Input.Variants.Bias=0;
+    Input.Variants.Swap=0;
+    Input.Variants.BiasF=0;
+    Input.Variants.PrecF=0;
+end
 if Input.Variants.Bias==0
     bias=0; % Responses concentrate on samples
 else
@@ -112,7 +137,13 @@ if Input.Variants.Swap==1
 end
 kappa_max=700; % Computational limit
 SampleSeed=1000; % Monte Carlo seed
+if strcmp(Input.Output,'LP') || strcmp(Input.Output,'Prior')
+    Prior=prior(param, Input, SS_range); % get prior
+elseif strcmp(Input.Output,'LLH')
+    Prior=1; % uniform prior
+end
 
+if ~strcmp(Input.Output,'Prior')
 % LH function
 if continuous==1
     
@@ -121,7 +152,7 @@ if continuous==1
     kappa=zeros(SampleSeed,length(SS_range),length(errors));
     kappa0_bar=exp(log(kappa1_bar)*(cosd(4*samples)).^precF);
     
-    % MC Sampling    
+    % MC Sampling
     for i_N=1:length(SS_range)
         kappa_bar=ones(SampleSeed,1)*kappa0_bar/(SS_range(i_N)).^power;
         kappa0=gamrnd(kappa_bar/tau, tau); % Sample from gamma distribution
@@ -136,7 +167,7 @@ if continuous==1
         conv_kappa=sqrt(kappa(:,SS_range==N,i_error).^2+kappa_r^2+2*kappa(:,SS_range==N,i_error)*kappa_r.*cosd(error0));
         if K<N
             p_error0(:,i_error)=(1-K/N)*1/(error_range(2)-error_range(1))+...
-                    (K/N)*besseli0_fast(conv_kappa)./(2*pi*besseli0_fast(kappa(:,SS_range==N,i_error))*besseli0_fast(kappa_r));
+                (K/N)*besseli0_fast(conv_kappa)./(2*pi*besseli0_fast(kappa(:,SS_range==N,i_error))*besseli0_fast(kappa_r));
         else
             p_error0(:,i_error)=besseli0_fast(conv_kappa)./(2*pi*besseli0_fast(kappa(:,SS_range==N,i_error))*besseli0_fast(kappa_r));
         end
@@ -154,17 +185,18 @@ if continuous==1
                             (K/N)*besseli0_fast(conv_kappa_nt)./(2*pi*besseli0_fast(kappa(:,SS_range==N,i_error))*besseli0_fast(kappa_r));
                     end
                 else
-                for i_nt=1:N-1
-                    error0_nt=errors_nt(i_nt, i_error)+bias_cur; % Errors with bias
-                    conv_kappa_nt=sqrt(kappa(:,SS_range==N,i_error).^2+kappa_r^2+2*kappa(:,SS_range==N,i_error)*kappa_r.*cosd(error0_nt));
-                    p_temp_NT=p_temp_NT+besseli0_fast(conv_kappa_nt)./(2*pi*besseli0_fast(kappa(:,SS_range==N,i_error))*besseli0_fast(kappa_r));
-                end
+                    for i_nt=1:N-1
+                        error0_nt=errors_nt(i_nt, i_error)+bias_cur; % Errors with bias
+                        conv_kappa_nt=sqrt(kappa(:,SS_range==N,i_error).^2+kappa_r^2+2*kappa(:,SS_range==N,i_error)*kappa_r.*cosd(error0_nt));
+                        p_temp_NT=p_temp_NT+besseli0_fast(conv_kappa_nt)./(2*pi*besseli0_fast(kappa(:,SS_range==N,i_error))*besseli0_fast(kappa_r));
+                    end
                 end
                 p_error0_NT(:,i_error)=p_temp_NT/(N-1);
             end
         end
     end
-    p_T=(1-s)*mean(p_error0,1);
+    p_error0=p_error0(~isinf(sum(p_error0,2)),:);
+    p_T=(1-s)*mean(p_error0(~isnan(sum(p_error0,2)),:),1);
     p_NT=s*mean(p_error0_NT,1);
     p_LH=p_T+p_NT;
     
@@ -189,7 +221,8 @@ else
                 p_error0(:,i_error,:)=(1-K/N)*1/length(error_range)+...
                     (K/N)*besseli0_fast(conv_kappa)./(2*pi*besseli0_fast(kappa)*besseli0_fast(kappa_r));
             end
-            p_error(i_N,:,:)=mean(p_error0,1);
+            p_error0=p_error0(~isinf(sum(p_error0,2)),:,:);
+            p_error(i_N,:,:)=mean(p_error0(~isnan(sum(p_error0,2)),:,:),1); % Find average across samples
             % Normalization
             for i_sample=1:length(sample_range)
                 p_error(i_N,:,i_sample)=p_error(i_N,:,i_sample)/sum(p_error(i_N,:,i_sample));
@@ -207,7 +240,9 @@ else
                 conv_kappa=sqrt(kappa.^2+kappa_r^2+2*kappa*kappa_r.*cosd(error0));
                 p_error0(:,i_error,:)=besseli0_fast(conv_kappa)./(2*pi*besseli0_fast(kappa)*besseli0_fast(kappa_r));
             end
-            p_error(i_N,:,:)=mean(p_error0,1);
+            p_error0=p_error0(~isinf(sum(p_error0,2)),:,:);
+            p_error(i_N,:,:)=mean(p_error0(~isnan(sum(p_error0,2)),:,:),1); % Find average across samples
+            
             % Normalization
             for i_sample=1:length(sample_range)
                 p_error(i_N,:,i_sample)=p_error(i_N,:,i_sample)/sum(p_error(i_N,:,i_sample));
@@ -245,20 +280,98 @@ end
 
 % LLH
 if isfield(Input,'PDF') && Input.PDF==1
-    if Input.Variants.PrecF==1 || Input.Variants.BiasF==1
-        if length(unique(Data.sample_range))~=1
-            error('PDF mode requires sample to be unique')
-        end
-    elseif length(unique(Data.SS))~=1
-        error('PDF mode requires set size to be unique')
-    else
-        LLH=p_error; % PDF
-    end
+    LLH.error=p_error; % PDF
 else
     LLH=-sum(log(p_LH)); % Negative LLH
     if abs(LLH)==Inf || isnan(LLH)
         LLH=exp(666); % LLH should be a real value
     end
+end
+
+
+    % Posterior
+    LP=-log(Prior)+LLH; % likelihood*prior
+    
+end
+
+% Decide output
+if strcmp(Input.Output,'LP')
+    Output=LP;
+elseif strcmp(Input.Output,'LLH')
+    Output=LLH;
+elseif strcmp(Input.Output,'Prior')
+    Output=Prior;
+end
+
+end
+
+% Define prior
+function p=prior(param, Input, SS_range)
+
+% Specify parameters
+kappa1_bar=param(1); % Unit resource
+% Gamma prior for unit resource
+p0(1)=gampdf(kappa1_bar,3,15);
+tau=param(2); % Resource allocation variability
+% prior for tau
+% Note that here we simplified the theoretical conjugate prior of
+% gamma distribution for convenience
+p0(2)=2.^(-0.05*tau)./tau.^(-2);
+% check power
+if length(SS_range)~=1
+    Nparam=3;
+    power=param(Nparam); % decay rate
+    % exponential prior for power (improper)
+    p0(Nparam)=exp(-power);
+else
+    Nparam=2;
+end
+Nparam=Nparam+1;
+kappa_r=param(Nparam); % Response variability
+% Cauchy prior for response noise
+% copy-paste from MemToolbox here
+p0(Nparam)=2./(pi+kappa_r.^2);
+Nparam=Nparam+1;
+K=param(Nparam); % Capacity
+% weibull prior for capacity
+p0(Nparam)=wblpdf(K,3.5,3); % given that K is ofter 3~4
+if ~isfield(Input,'Variants') % No Variants
+    Input.Variants.Bias=0;
+    Input.Variants.Swap=0;
+    Input.Variants.BiasF=0;
+    Input.Variants.PrecF=0;
+end
+if Input.Variants.Bias==1
+    bias=param(Nparam); % Mean bias
+    % Gaussian prior for bias
+    p0(Nparam)=normpdf(bias, 0, 1);
+end
+if Input.Variants.BiasF==1
+    Nparam=Nparam+1;
+    biasF=param(Nparam); % Fluctuation of bias
+    % Gaussian prior for the fluctuation of bias
+    p0(Nparam)=normpdf(biasF, 0, 5);
+end
+if Input.Variants.PrecF==1
+    Nparam=Nparam+1;
+    precF=param(Nparam); % Fluctuation of precision
+    % Gaussian prior for the fluctuation of precision
+    p0(Nparam)=normpdf(precF, 0, 1);
+end
+if Input.Variants.Swap==1
+    Nparam=Nparam+1;
+    s=param(Nparam); % Swap rate
+    % Gaussian prior for the swap rate
+    p0(Nparam)=normpdf(s, 0.5, 1);
+end
+
+% Construct joint distribution
+% Consider independent parameters here
+% We think it's generally acceptable for prior definition,
+% tho it's usually not the actual case
+p=1;
+for i=1:Nparam
+    p=p*p0(i);
 end
 
 end

@@ -1,7 +1,7 @@
 %% Configuration_BMW
 %
 % Configure model estimation & assessment
-% Write information in the original MA_BMW.mat file
+% Write information in the original MA_BMW variable (.mat file for GUI).
 % -----------------------
 % [MA_BMW]=Configuration_BMW(Input)
 % ## Input ##
@@ -13,6 +13,7 @@
 % Programmed by Ma, Tianye
 % Under the instruction of Dr. Ku, Yixuan
 % Memory, Attention & Cognition (MAC) Lab,
+% Sun Yat-Sen University
 % 10/2/2019
 %
 % Bug reports or any other feedbacks please contact M.T. (mack_ma2018@outlook.com)
@@ -35,9 +36,13 @@ else
 end
 % Default set
 if isfield(Input.FitOptions,'Default') && Input.FitOptions.Default==1
-    Input.FitOptions=Info_BMW('Fit Options'); end
+    Q.Item='Fit Options'; Q.Algorithm='Default';
+    Input.FitOptions=Info_BMW(Q); 
+end
 if isfield(Input.Criteria,'Default') && Input.Criteria.Default==1
-    Input.Criteria=Info_BMW('Criteria'); end
+    Q.Item='Criteria';
+    Input.Criteria=Info_BMW(Q); 
+end
 if isfield(Input.Constraints,'Default') && Input.Constraints.Default==1
     QModel.Model=MA_BMW.Model.Model;
     QModel.Variants=MA_BMW.Model.Variants;

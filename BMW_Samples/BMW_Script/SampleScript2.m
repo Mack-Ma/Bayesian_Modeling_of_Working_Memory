@@ -24,70 +24,59 @@ addpath('Your BMW Toolbox Path')
 BMW('Silent'); % Add subfolders
 
 % Configuration
-Nset=10; % # of datasets per condition
-Ntrial=3000; % # of trials per dataset per set size
+Nset=10; % # of datasets
+Ntrial=4000; % # of trials per dataset
 
 %% Simulation
 Dataset=cell(1,Nset); % Pre-allocation
-SS_range=[1 3]; % Range of set size
+SS_range=[1 2 4 6]; % Range of set size
 % Generate pdf
 Data.error_range=-89:1:90; % Axial data
 Data.error=0;
-Data.SS=ones(length(Data.error),1);
+Data.SS=reshape(repmat(SS_range,ceil(Ntrial/length(SS_range)),1),[Ntrial,1]);
 Input.PDF=1; % Switch on pdf mode
-tau_range=100:20:300; % Range of resource allocation variability
-kappa_range=[100 200 300]; % Range of mean precision at set size 1
+tau=200; % Range of resource allocation variability
+kappa=200; % Range of mean precision at set size 1
 power=2;
-kappa_r=125;
+kappa_r=200;
 % Generate data
 for set=1:Nset
-    flag_tau=0;
-    SimData=cell(length(tau_range),length(kappa_range));
-    for tau=tau_range
-        flag_tau=flag_tau+1;
-        flag_kappa=0;
-        for kappa_bar=kappa_range
-            flag_kappa=flag_kappa+1;
-            data_temp=zeros(Ntrial,length(SS_range));
-            param=[kappa_bar,tau,kappa_r];
-            for iSS=1:length(SS_range)
-                SS=SS_range(iSS);
-                param(1)=param(1)/SS^power;
-                Data.SS=SS*Data.SS;
-                VPpdf=Variable_Precision(param,Data,Input);
-                PDF=[Data.error_range;VPpdf];
-                data_temp(:,iSS)=randsrc(Ntrial,1,PDF);
-                fprintf('\ndataset: %d, set size: %d, kappa: %.2f, tau: %.2f\n',set,SS,kappa_bar,tau) % Progress
-            end
-            SimData{flag_tau,flag_kappa}.Param=param;
-            SimData{flag_tau,flag_kappa}.Data=data_temp;
-        end
+    data_temp.error=zeros(Ntrial,1);
+    param=[kappa,tau,power,kappa_r];
+    PDF=Variable_Precision(param,Data,Input); % SS-by-error
+    freq_temp=0*PDF;
+    for i=1:size(PDF,3)
+        freq_temp=mnrnd(ceil(Ntrial/length(SS_range)),PDF); % Sampling based on the multinominal distribution
     end
+    % Construct data based on the frequency
+    data_temp.SS=Data.SS;
+    data_temp.error_range=Data.error_range;
+    for ss=1:length(SS_range)
+        error_temp=zeros(ceil(Ntrial/length(SS_range)),1);
+        flag_err=1;
+        for err=1:length(Data.error_range)
+            if freq_temp(ss,err)~=0
+                error_temp(flag_err:flag_err+freq_temp(ss,err)-1)=Data.error_range(err)*ones(freq_temp(ss,err),1);
+                flag_err=flag_err+freq_temp(ss,err);
+            end
+        end
+        data_temp.error(1+(ss-1)*ceil(Ntrial/length(SS_range)):ss*ceil(Ntrial/length(SS_range)))=error_temp;
+    end
+    fprintf('\ndataset: %d, kappa: %d, tau: %.2f, power: %.2f, kappa_r: %.2f\n',set,kappa,tau,power,kappa_r) % Progress
+    SimData.Param=param;
+    SimData.Data=data_temp;
     Dataset{set}=SimData;
     fprintf('\nDataset %d finished.\n',set)
 end
 
 %% Circular SD
-CSD=zeros(Nset,length(tau_range),length(kappa_range),length(SS_range));
+CSD=zeros(Nset,length(SS_range));
 for set=1:Nset
-    for tau=1:length(tau_range)
-        for kappa=1:length(kappa_range)
-            for SS=1:length(SS_range)
-                data=Dataset{set}{tau,kappa}.Data;
-                CSD(set,tau,kappa,SS)=CircSummary_BMW('CircSD',data(:,SS),180); % Note that the period should be revised accordingly
-            end
-        end
-    end
-end
-
-%% Relationship between parameters
-% CSD-tau-mean precision
-for SS=1:length(SS_range)
-    figure(SS)
-    for kappa=1:length(kappa_range)
-        data=CSD(:,:,kappa,SS);
-        hold on
-        errorbar(tau_range,mean(data),std(data))
+    for ss=1:length(SS_range)
+        data_error=Dataset{set}.Data.error;
+        data_ss=Dataset{set}.Data.SS;
+        data=data_error(data_ss==SS_range(ss));
+        CSD(set,ss)=CircSummary_BMW('CircSD',data,180); % Note that the period should be revised accordingly
     end
 end
 

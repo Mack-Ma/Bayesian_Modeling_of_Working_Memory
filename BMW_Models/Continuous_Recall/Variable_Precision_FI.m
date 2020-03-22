@@ -1,20 +1,22 @@
-%% Equal Precision
+%% Variable Precision (Using Fisher Information)
 %
-% Define the Equal Precision model
+% Define the Variable Precision with Capacity model
 % ------------
-% Output=Equal_Precision(param, Data, Input)
+% Output=Variable_Precision_with_Capacity(param, Data, Input)
 %
 % ## Theory ##
-% This model assumed that there's no item-based capacity limit and
+% This model assumed that there's a fixed, discrete, item-based capacity limit and
 % the relationship between memory fidelity and set size follows a power-law
-% function. Resource remains consistent across items & trials
-% at the same set size. Responses follow a Von Mises distribution.
+% function. In addition, memory resource should have trial-by-trial, item-by-item variation.
+% The response probability density distribution follows the weighted addition of
+% random guess (uniform) and memory response (Von Mises) in which
+% the shape parameter follows Gamma distribution.
 %
 % ## Input ##
 % check the manual for details (BMW('manual'))
 %
 % - param
-% kappa1_bar, (power,) kappa_r, (bias, biasF, precF, s)
+% J1_bar, tau, (power,) kappa_r, K, (bias, biasF, precF, s)
 %
 % - Data
 % Data.error (response-sample), Data.SS (set size)
@@ -44,6 +46,8 @@
 % - van den Berg, R., Shin, H., Chou, W. C., George, R., & Ma, W. J. (2012).
 % "Variability in encoding precision accounts for visual short-term memory limitations".
 % Proceedings of the National Academy of Sciences, 109(22), 8780-8785.
+% - van den Berg, R., Awh, E., & Ma, W. J. (2014). Factorial comparison of working memory models.
+% Psychological review, 121(1), 124.
 % - Bays, P. M., Catalao, R. F., & Husain, M. (2009). "The precision of visual working memory
 % is set by allocation of a shared resource." Journal of Vision, 9(10), 7-7.
 % - Pratte, M. S., Park, Y. E., Rademaker, R. L., & Tong, F. (2017). "Accounting for stimulus-specific variation
@@ -61,11 +65,12 @@
 % BMW toolbox: https://github.com/Mack-Ma/Bayesian_Modeling_of_Working_Memory
 %
 
-function Output=Equal_Precision(param, Data, Input)
+function Output=Variable_Precision_FI(param, Data, Input)
 
 % Specify parameters
-kappa1_bar=param(1); % Precision at set size 1
-Nparam=1;
+J1_bar=param(1); % Precision at set size 1
+tau=param(2); % Resource allocation variability
+Nparam=2;
 SS=Data.SS;
 SS_range=unique(SS);
 if length(SS_range)~=1
@@ -75,7 +80,7 @@ else
     power=0;
 end
 Nparam=Nparam+1;
-kappa_r=param(3); % Response variability
+kappa_r=param(Nparam); % Response variability
 if ~isfield(Input,'Variants') % No Variants
     Input.Variants.Bias=0;
     Input.Variants.Swap=0;
@@ -116,7 +121,9 @@ else
     continuous=0;
 end
 if Input.Variants.BiasF==1 || Input.Variants.PrecF==1
-    sample_range=Data.sample_range;
+    if isfield(Data,'sample_range')
+        sample_range=Data.sample_range;
+    end
     samples=Data.sample;
 else
     samples=ones(1,length(errors));
@@ -129,6 +136,7 @@ if Input.Variants.Swap==1
     end
 end
 kappa_max=700; % Computational limit
+SampleSeed=1000; % Monte Carlo seed
 if strcmp(Input.Output,'LP') || strcmp(Input.Output,'Prior')
     Prior=prior(param, Input, SS_range); % get prior
 elseif strcmp(Input.Output,'LLH')
@@ -137,59 +145,82 @@ end
 
 if ~strcmp(Input.Output,'Prior')
     % LH function
-    if continuous==1
-        p_error=zeros(1,length(errors));
-        p_error_NT=zeros(1,length(errors));
-        kappa0=exp(log(kappa1_bar)*(cosd(4*samples)).^precF); % Flucutuative precision
+    if continuous==1 % Continuous mode
+        
+        p_error0=zeros(SampleSeed,length(errors));
+        p_error0_NT=zeros(SampleSeed,length(errors));
+        kappa=zeros(SampleSeed,length(SS_range),length(errors));
+        J0_bar=exp(log(J1_bar)*(cosd(4*samples)).^precF);
+        
+        kappa_map=linspace(0,kappa_max,1e5);
+        J_map=kappa_map.*besseli(1,kappa_map)./besseli(0,kappa_map);
+        % MC Sampling
+        for i_N=1:length(SS_range)
+            J_bar=ones(SampleSeed,1)*J0_bar/(SS_range(i_N)).^power;
+            J0=gamrnd(J_bar/tau, tau); % Sample from gamma distribution
+            kappa0=interp1(J_map,kappa_map,J0,'pchip');
+            kappa(:,i_N,:)=min(kappa0, kappa_max); % Constricted by the max kappa
+        end
+        
         for i_error=1:length(errors)
             N=SS(i_error);
-            error0=errors(i_error)+bias+biasF*cosd(4*samples(i_error)-90);
-            kappa=kappa0(i_error)/(N).^power; % Relationship between precision & set size
-            kappa=min(kappa, kappa_max); % Constricted by the max kappa
-            % Convolute motor noise
-            conv_kappa=sqrt(kappa.^2+kappa_r^2+2*kappa*kappa_r.*cosd(error0));
-            p_error(i_error)=besseli0_fast(conv_kappa)./(2*pi*besseli0_fast(kappa)*besseli0_fast(kappa_r));
+            bias_cur=bias+biasF*cosd(4*samples(i_error)-90);
+            error0=errors(i_error)+bias_cur; % Errors with bias
+            % Von Mises distribution convoluted by kappa_r
+            conv_kappa=sqrt(kappa(:,SS_range==N,i_error).^2+kappa_r^2+2*kappa(:,SS_range==N,i_error)*kappa_r.*cosd(error0));
+            p_error0(:,i_error)=besseli0_fast(conv_kappa)./(2*pi*besseli0_fast(kappa(:,SS_range==N,i_error))*besseli0_fast(kappa_r));
+            
             if Input.Variants.Swap==1
                 if N==1
-                    p_error_NT(i_error)=0;
+                    p_error0_NT(:,i_error)=0;
                 else
-                    p_temp_NT=0;
+                    p_temp_NT=zeros(SampleSeed,1);
                     for i_nt=1:N-1
-                        error0_nt=errors_nt(i_nt, i_error)+bias+biasF*cosd(4*samples(i_error)-90); % Errors with bias
-                        conv_kappa=sqrt(kappa.^2+kappa_r^2+2*kappa*kappa_r.*cosd(error0_nt));
-                        p_temp_NT=p_temp_NT+besseli0_fast(conv_kappa)./(2*pi*besseli0_fast(kappa)*besseli0_fast(kappa_r));
+                        error0_nt=errors_nt(i_nt, i_error)+bias_cur; % Errors with bias
+                        conv_kappa_nt=sqrt(kappa(:,SS_range==N,i_error).^2+kappa_r^2+2*kappa(:,SS_range==N,i_error)*kappa_r.*cosd(error0_nt));
+                        p_temp_NT=p_temp_NT+besseli0_fast(conv_kappa_nt)./(2*pi*besseli0_fast(kappa(:,SS_range==N,i_error))*besseli0_fast(kappa_r));
                     end
-                    p_error_NT(i_error)=p_temp_NT/(N-1);
+                    p_error0_NT(:,i_error)=p_temp_NT/(N-1);
                 end
             end
         end
-        p_T=(1-s)*p_error;
-        p_NT=s*p_error_NT;
+        p_error0=p_error0(~isinf(sum(p_error0,2)),:);
+        p_T=(1-s)*mean(p_error0(~isnan(sum(p_error0,2)),:),1);
+        p_NT=s*mean(p_error0_NT,1);
         p_LH=p_T+p_NT;
         
-    else
-        bias_cur=bias+biasF*cosd(4*sample_range-90); % Current bias
-        kappa0=exp(log(kappa1_bar)*(cosd(4*sample_range).^precF)); % Current precision
+    else % Discrete mode
         
+        J0_bar=exp(log(J1_bar)*(cosd(4*sample_range)).^precF);
+        bias_cur=bias+biasF*cosd(4*sample_range-90);
+        bias_cur=ones(SampleSeed,1)*bias_cur;
         p_error=zeros(length(SS_range),length(error_range), length(sample_range));
+        kappa_map=linspace(0,kappa_max,1e5);
+        J_map=kappa_map.*besseli(1,kappa_map)./besseli(0,kappa_map);
         for i_N=1:length(SS_range)
             N=SS_range(i_N);
             
-            kappa=kappa0/(N).^power; % Relationship between precision & set size
-            kappa=min(kappa, kappa_max); % Constricted by the max kappa
+            % MC Sampling
+            J_bar=ones(SampleSeed,1)*J0_bar/(N).^power;
+            J0=gamrnd(J_bar/tau, tau); % Sample from gamma distribution
+            kappa0=interp1(J_map,kappa_map,J0,'pchip');
+            kappa=min(kappa0, kappa_max); % Constricted by the max kappa
             
+            p_error0=zeros(SampleSeed,length(error_range),length(sample_range));
             for i_error=1:length(error_range)
-                error0=error_range(i_error)+bias_cur;
-                % Convolute motor noise
+                error0=error_range(i_error)+bias_cur; % Errors with bias
+                % Von Mises distribution convoluted by kappa_r
                 conv_kappa=sqrt(kappa.^2+kappa_r^2+2*kappa*kappa_r.*cosd(error0));
-                p_error(i_N,i_error,:)=besseli0_fast(conv_kappa)./(2*pi*besseli0_fast(kappa)*besseli0_fast(kappa_r));
+                p_error0(:,i_error,:)=besseli0_fast(conv_kappa)./(2*pi*besseli0_fast(kappa)*besseli0_fast(kappa_r));
             end
+            p_error0=p_error0(~isinf(sum(p_error0,2)),:,:);
+            p_error(i_N,:,:)=mean(p_error0(~isnan(sum(p_error0,2)),:,:),1); % Find average across samples
+            
             % Normalization
             for i_sample=1:length(sample_range)
-                p_error(i_N,:,i_sample)=p_error(i_N,:,i_sample)./sum(p_error(i_N,:,i_sample));
+                p_error(i_N,:,i_sample)=p_error(i_N,:,i_sample)/sum(p_error(i_N,:,i_sample));
             end
         end
-        
         % Calculate LH
         p_T=zeros(1,length(errors));
         p_NT=zeros(1,length(errors));
@@ -220,7 +251,7 @@ if ~strcmp(Input.Output,'Prior')
     
     % LLH
     if isfield(Input,'PDF') && Input.PDF==1
-        LLH.error=p_error; % PDF
+        LLH=p_error; % PDF
     else
         LLH=-sum(log(p_LH)); % Negative LLH
         if abs(LLH)==Inf || isnan(LLH)
@@ -229,7 +260,7 @@ if ~strcmp(Input.Output,'Prior')
     end
     
     % Posterior
-    LP=-log(Prior)+LLH; % likelihood*prior
+    LP=log(Prior)+LLH; % likelihood*prior
     
 end
 
@@ -251,20 +282,25 @@ function p=prior(param, Input, SS_range)
 kappa1_bar=param(1); % Unit resource
 % Gamma prior for unit resource
 p0(1)=gampdf(kappa1_bar,3,15);
+tau=param(2); % Resource allocation variability
+% prior for tau
+% Note that here we simplified the theoretical conjugate prior of
+% gamma distribution for convenience
+p0(2)=2.^(-0.05*tau)./tau.^(-2);
 % check power
 if length(SS_range)~=1
-    Nparam=2;
+    Nparam=3;
     power=param(Nparam); % decay rate
     % exponential prior for power (improper)
     p0(Nparam)=exp(-power);
 else
-    Nparam=1;
+    Nparam=2;
 end
 Nparam=Nparam+1;
 kappa_r=param(Nparam); % Response variability
 % Cauchy prior for response noise
 % copy-paste from MemToolbox here
-p0(Nparam)=2/(pi+kappa_r.^2);
+p0(Nparam)=2./(pi+kappa_r.^2);
 if ~isfield(Input,'Variants') % No Variants
     Input.Variants.Bias=0;
     Input.Variants.Swap=0;
@@ -305,3 +341,4 @@ for i=1:Nparam
 end
 
 end
+

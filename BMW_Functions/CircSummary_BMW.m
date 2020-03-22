@@ -31,7 +31,7 @@
 %
 % ------------
 % Programmed by Ma, Tianye
-% Under the instruction of Dr. Ku, Yixuan
+% Mentored by Dr. Ku, Yixuan
 % Memory, Attention & Cognition (MAC) Lab,
 % East China Normal University
 % 12/9/2019

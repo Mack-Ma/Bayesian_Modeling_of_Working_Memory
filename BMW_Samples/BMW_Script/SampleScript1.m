@@ -8,7 +8,7 @@
 % Programmed by Ma, Tianye
 % Under the instruction of Dr. Ku, Yixuan
 % Memory, Attention & Cognition (MAC) Lab,
-% East China Normal University
+% Sun Yat-Sen University
 % 10/31/2019
 %
 % Bug reports or any other feedbacks please contact M.T. (mack_ma2018@outlook.com)
@@ -36,8 +36,8 @@ for i=1:Nmodel
     Config_MA.Data=Data;
     % Specify model
     Config_MA.Model.Model=ModelSpace{i};
-    % Set Variants
-    Config_MA.Model.Variants.Swap=1; % Swap rate
+    % Set Variants (Optional)
+    Config_MA.Model.Variants.Swap=0; % Swap rate
     Config_MA.Model.Variants.PrecF=0; % Fluctuation of precision
     Config_MA.Model.Variants.BiasF=0; % Fluctuation of bias
     Config_MA.Model.Variants.Bias=0; % Bias
@@ -49,13 +49,13 @@ for i=1:Nmodel
 %     Config_MA.Criteria.BIC=1; % Assign 1 to calculate BIC
 %     Config_MA.Criteria.DIC=1; % Assign 1 to calculate DIC
 %     Config_MA.Criteria.WAIC=1; % Assign 1 to calculate WAIC
-%     Config_MA.Criteria.LME=1; % % Assign 1 to calculate log model evidence
+%     Config_MA.Criteria.LME=1; % % Assign 1 to calculate log marginal likelihood
     % All default
     Config_MA.Criteria.Default=1;  
     Config_MA.Constraints.Default=1;
     Config_MA.FitOptions.Default=1;
-%     Config_MA.FitOptions.Algorithm='SA'; % Change optimization algorithm (Default: 'GA')
-%     Config_MA.FitOptions.MaxIter=5000; % Change the max # of iteration (Default: 3000)
+%     Config_MA.FitOptions.Algorithm='SA'; % Change the optimization algorithm (Default: 'DE-MCMC')
+%     Config_MA.FitOptions.MaxIter=3000; % Change the max # of iteration (Default: 5000)
 %     Config_MA.FitOptions.Display='off'; % Change the display mode (Default: 'iter')
     Config_MA.InputFile=MA;
     % Configuration
@@ -75,7 +75,7 @@ Config_MC.Criterion='AICc';
 MC_All.AICc=ModelComparison_BMW(Config_MC);
 Config_MC.Criterion='BIC';
 MC_All.BIC=ModelComparison_BMW(Config_MC);
-% Config_MC.Criterion='LME'; % Log model evidence
+% Config_MC.Criterion='LME';
 % MC_All.LME=ModelComparison_BMW(Config_MC); % Make comparison based on LME
 
 %% Epilogue

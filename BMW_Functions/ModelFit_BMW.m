@@ -33,7 +33,7 @@ end
 Data=MA_BMW.Data;
 % Nss=length(unique(Data{1}.SS));
 Nsubj=length(Data);
-LLH=zeros(Nsubj,1); AIC=zeros(Nsubj,1); BIC=zeros(Nsubj,1);
+Output=zeros(Nsubj,1); AIC=zeros(Nsubj,1); BIC=zeros(Nsubj,1);
 AICc=zeros(Nsubj,1); DIC=zeros(Nsubj,1); WAIC=zeros(Nsubj,1);
 LME=zeros(Nsubj,1);
 % SE=zeros(Nsubj,Nss,9);
@@ -46,14 +46,14 @@ Ntrial=length(Data{1}.error);
 Nparam=length(Param0);
 Param=zeros(Nsubj,Nparam);
 Param(1,:)=Param0;
-LLH(1)=Quality.LLH;
+Output(1)=Quality.LP;
 % SE(1,1:Nss,:)=Quality.SE;
 if Nsubj>1
     for subj=2:Nsubj
         fprintf('\nSubject: %s\n',num2str(subj))
-        % Fit by MLE
+        % Fit
         [Param(subj,:),Quality]=Mack_Fit(Data{subj},Config_Fit,ModelName,MA_BMW.Constraints,MA_BMW.FitOptions);
-        LLH(subj)=Quality.LLH;
+        Output(subj)=Quality.LP;
         %         SE(subj,1:length(unique(Data{subj}.SS)),:)=Quality.SE;
     end
 end
@@ -61,23 +61,25 @@ end
 %% AIC, AICc, BIC
 % Calculate AIC/AICc/BIC by maximum likelihood
 for subj=1:Nsubj
-    if isfield(MA_BMW.Criteria,'AIC') && MA_BMW.Criteria.AIC==1, AIC(subj)=-2*LLH(subj)+2*Nparam; end
-    if isfield(MA_BMW.Criteria,'AICc') && MA_BMW.Criteria.AICc==1, AICc(subj)=-2*LLH(subj)+2*Nparam+2*Nparam*(Nparam+1)/(Ntrial-Nparam-1); end
-    if isfield(MA_BMW.Criteria,'BIC') && MA_BMW.Criteria.BIC==1, BIC(subj)=-2*LLH(subj)+Nparam*log(Ntrial); end
+    if isfield(MA_BMW.Criteria,'AIC') && MA_BMW.Criteria.AIC==1, AIC(subj)=-2*Output(subj)+2*Nparam; end
+    if isfield(MA_BMW.Criteria,'AICc') && MA_BMW.Criteria.AICc==1, AICc(subj)=-2*Output(subj)+2*Nparam+2*Nparam*(Nparam+1)/(Ntrial-Nparam-1); end
+    if isfield(MA_BMW.Criteria,'BIC') && MA_BMW.Criteria.BIC==1, BIC(subj)=-2*Output(subj)+Nparam*log(Ntrial); end
 end
 
 %% LME
-% Calculate LME by Riemann sum
-if isfield(MA_BMW.Criteria, 'LME') && MA_BMW.Criteria.LME==1
-    Opt_LME.Nblock=1000;
-    Opt_LME.lb=MA_BMW.Constraints.lb;
-    Opt_LME.ub=MA_BMW.Constraints.ub;
-    Opt_LME.Model=Config_Fit;
-    Opt_LME.Verbosity=1; % Assign 1 to display the result
-    for subj=1:Nsubj
-        LME(subj)=Mack_LME_RS(ModelName, Data{subj}, Opt_LME, LLH(subj));
-    end
-end
+% % Calculate LME based on Riemann sum
+% if isfield(MA_BMW.Criteria, 'LME') && MA_BMW.Criteria.LME==1
+%     Opt_LME.Nblock=1000;
+%     Opt_LME.lb=MA_BMW.Constraints.lb;
+%     Opt_LME.ub=MA_BMW.Constraints.ub;
+%     Opt_LME.Model=Config_Fit;
+%     Opt_LME.Verbosity=1; % Assign 1 to display the result
+%     for subj=1:Nsubj
+%         LME(subj)=Mack_LME_RS(ModelName, Data{subj}, Opt_LME, Output(subj));
+%     end
+% end
+
+% Calculate LME based on MCMC
 
 %% DIC, WAIC
 % Calculate DIC/WAIC by MCMC
@@ -95,8 +97,8 @@ end
 
 %% Epilogue
 MA_BMW.Param=Param;
-if isfield(MA_BMW.Criteria,'LLH') && MA_BMW.Criteria.LLH==1
-    MA_BMW.LLH=LLH;
+if isfield(MA_BMW.Criteria,'Output') && MA_BMW.Criteria.Output==1
+    MA_BMW.Output=Output;
 end
 % MA_BMW.RMSEA=SE;
 MA_BMW.AIC=AIC;

@@ -1,8 +1,8 @@
 %% Categorical Slots-plus-Averaging (Between-Variant)
 %
-% Log likelihood function of the Categorical Slots-plus-Averaging (Between-Variant) model
+% Define the Categorical Slots-plus-Averaging (Between-Variant) model
 % ------------
-% LLH=Categorical_Slots_plus_Averaging_BV(param, Data, Input)
+% Output=Categorical_Slots_plus_Averaging_BV(param, Data, Input)
 %
 % ## Theory ##
 % This model assumed that the responses were supported by both categorical
@@ -13,16 +13,34 @@
 % between random guess (uniform) & memory response (Von Mises)
 %
 % ## Input ##
+% check the manual for details (BMW('manual'))
+%
 % - param
-% K, kappa_1, kappa_r, kappa_c, p_c (bias, biasF, s)
+% K, kappa_1, kappa_r, kappa_c, p_c, (bias, s)
+%
 % - Data
 % Data.error (response-sample), Data.SS (set size), Data.error_c, (category-sample)
 % (Data.sample_range, Data.sample, Data.error_nt, Data.sample_nt, Data.error_nt_c)
+%
 % - Input
-% Input.Variants (options of Variants), Input.PDF
+% Input.Variant
+%   options of model variants
+%       Input.Variants.Bias, 0/1 to decide whether consider representational
+%       shift/response bias
+%       Input.Variants.Swap, 0/1 to decide whether use swap variants
+%       Input.Variants.BiasF, 0/1 to decide whether consider a cosine-shaped
+%       fluctuation of representational shift/response bias
+% Input.Output
+%   string, choose output mode
+%       'Prior', only output prior density
+%       'LLH', output log likelihood
+%       'LP', output log posterior density
+% Input.PDF
+%   0/1, output pdf or not. default as 0
+%   Valid only when Input.Output=='LLH'
 %
 % ## Output ##
-% Summed log Likelihood
+% Output is conditional to Input.Output & Input.PDF
 %
 % ## Reference ##
 % - Zhang, W., & Luck, S. J. (2008). Discrete fixed-resolution representations in visual working memory.
@@ -38,7 +56,7 @@
 %
 % ------------
 % Programmed by Ma, Tianye
-% Under the guidance of Dr. Ku, Yixuan
+% Mentored by Dr. Ku, Yixuan
 % Memory, Attention & Cognition (MAC) Lab,
 % East China Normal University
 % 9/26/2019
@@ -48,7 +66,7 @@
 %
 
 
-function LLH=Categorical_Slots_plus_Averaging_BV(param, Data, Input)
+function Output=Categorical_Slots_plus_Averaging_BV(param, Data, Input)
 
 % Specify parameters
 K=param(1); % Capacity
@@ -57,6 +75,12 @@ kappa_r=param(3); % Response variability
 kappa_c=param(4); % Precision of categorical memory
 p_c=param(5); % Weight of categorical memory
 Nparam=5;
+if ~isfield(Input,'Variants') % No Variants
+    Input.Variants.Bias=0;
+    Input.Variants.Swap=0;
+    Input.Variants.BiasF=0;
+    Input.Variants.PrecF=0;
+end
 if Input.Variants.Bias==0
     bias=0; % Responses concentrate on samples
 else
@@ -92,7 +116,13 @@ if Input.Variants.Swap==1
     errors_nt=Data.error_nt;
     errors_nt_c=Data.error_nt_c;
 end
+if strcmp(Input.Output,'LP') || strcmp(Input.Output,'Prior')
+    Prior=prior(param, Input); % get prior
+elseif strcmp(Input.Output,'LLH')
+    Prior=1; % uniform prior
+end
 
+if ~strcmp(Input.Output,'Prior')
 % LH function
 if continuous==1
     p_error=zeros(1,length(errors));
@@ -109,7 +139,7 @@ if continuous==1
             conv_1=sqrt((kappa_1).^2+(kappa_r)^2+2*kappa_1*kappa_r.*cosd(error0));
             p_error(i_error)=(1-K/N)*1/(error_range(2)-error_range(1))+...
                 (K/N)*((1-p_c)*(besseli0_fast(conv_1)./(2*pi*besseli0_fast(kappa_1)*besseli0_fast(kappa_r)))+...
-            p_c*(besseli0_fast(conv_1_c)./(2*pi*besseli0_fast(kappa_c)*besseli0_fast(kappa_r))));
+                p_c*(besseli0_fast(conv_1_c)./(2*pi*besseli0_fast(kappa_c)*besseli0_fast(kappa_r))));
         else
             conv_low=sqrt((kappa_low).^2+(kappa_r)^2+2*kappa_low*kappa_r.*cosd(error0));
             conv_high=sqrt((kappa_high).^2+(kappa_r)^2+2*kappa_high*kappa_r.*cosd(error0));
@@ -136,7 +166,7 @@ if continuous==1
                         conv_high=sqrt((kappa_high).^2+(kappa_r)^2+2*kappa_high*kappa_r.*cosd(error0_nt));
                         p_temp_NT=p_temp_NT+(1-p_c)*(p_low*(besseli0_fast(conv_low)./(2*pi*besseli0_fast(kappa_low)*besseli0_fast(kappa_r)))+...
                             p_high*(besseli0_fast(conv_high)./(2*pi*besseli0_fast(kappa_high)*besseli0_fast(kappa_r))))+...
-                        p_c*(besseli0_fast(conv_1_c_nt)./(2*pi*besseli0_fast(kappa_c)*besseli0_fast(kappa_r)));
+                            p_c*(besseli0_fast(conv_1_c_nt)./(2*pi*besseli0_fast(kappa_c)*besseli0_fast(kappa_r)));
                     end
                 end
                 p_error_NT(i_error)=p_temp_NT/(N-1);
@@ -206,20 +236,75 @@ end
 
 % LLH
 if isfield(Input,'PDF') && Input.PDF==1
-    if Input.Variants.PrecF==1 || Input.Variants.BiasF==1
-        if length(unique(Data.sample_range))~=1
-            error('PDF mode requires sample to be unique')
-        end
-    elseif length(unique(Data.SS))~=1
-        error('PDF mode requires set size to be unique')
-    else
-        LLH=p_error; % PDF
-    end
+    LLH.error=p_error; % PDF of continuous error
+    LLH.error_c=p_error_c; % PDF of categorical error
 else
     LLH=-sum(log(p_LH)); % Negative LLH
     if abs(LLH)==Inf || isnan(LLH)
         LLH=exp(666); % LLH should be a real value
     end
+end
+
+    % Posterior
+    LP=log(Prior)+LLH; % likelihood*prior
+    
+end
+
+% Decide output
+if strcmp(Input.Output,'LP')
+    Output=LP;
+elseif strcmp(Input.Output,'LLH')
+    Output=LLH;
+elseif strcmp(Input.Output,'Prior')
+    Output=Prior;
+end
+
+end
+
+% Define prior
+function p=prior(param, Input)
+
+% Specify parameters
+K=param(1); % Capacity
+% weibull prior for capacity
+p0(1)=wblpdf(K,3.5,3); % given that K is ofter 3~4
+kappa_1=param(2); % Unit resource
+% Gamma prior for unit resource
+p0(2)=gampdf(kappa_1,3,5);
+kappa_r=param(3); % Response variability
+% Cauchy prior for response noise
+% copy-paste from MemToolbox here
+p0(3)=2/(pi+kappa_r.^2);
+kappa_c=param(4); % categorical memory precision
+% Gamma prior for categorical memory precision
+p0(4)=gampdf(kappa_c,3,5);
+p_c=param(5); % categorical weight
+% Gaussian prior for the rate of categorical memory
+p0(5)=normpdf(p_c, 0.5, 1);
+Nparam=5;
+if ~isfield(Input,'Variants') % No Variants
+    Input.Variants.Bias=0;
+    Input.Variants.Swap=0;
+end
+if Input.Variants.Bias==1
+    bias=param(Nparam); % Mean bias
+    % Gaussian prior for bias
+    p0(Nparam)=normpdf(bias, 0, 1);
+end
+if Input.Variants.Swap==1
+    Nparam=Nparam+1;
+    s=param(Nparam); % Swap rate
+    % Gaussian prior for the swap rate
+    p0(Nparam)=normpdf(s, 0.5, 1);
+end
+
+% Construct joint distribution
+% Consider independent parameters here
+% We think it's generally acceptable for prior definition,
+% tho it's usually not the actual case
+p=1;
+for i=1:Nparam
+    p=p*p0(i);
 end
 
 end

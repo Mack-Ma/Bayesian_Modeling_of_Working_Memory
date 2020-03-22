@@ -66,9 +66,6 @@ switch Algorithm
         FitOptions.badsOptions=bads('defaults');
         FitOptions.badsOptions.Display=Display;
         FitOptions.badsOptions.MaxIter=MaxIter;
-    case 'CM-AES'
-        
-    case 'bayesopt'
         
 end
 end

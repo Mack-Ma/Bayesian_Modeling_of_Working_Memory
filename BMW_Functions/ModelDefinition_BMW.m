@@ -23,6 +23,9 @@ function [MA_BMW]=ModelDefinition_BMW(Input)
 fprintf('\n---------------------------------------- \n')
 fprintf('\nNow start defining model... \n')
 MA_BMW.Model=Input.Model;
+if ~isfield(MA_BMW.Model,'Output')
+    MA_BMW.Model.Output='LP'; % set MAP as default
+end
 if ischar(Input.Data)
     RawData=load(Input.Data);
     DataName=fieldnames(RawData);
