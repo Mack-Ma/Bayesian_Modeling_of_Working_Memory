@@ -118,7 +118,7 @@ if Input.Variants.Swap==1
 end
 if strcmp(Input.Output,'LP') || strcmp(Input.Output,'Prior')
     Prior=prior(param, Input); % get prior
-elseif strcmp(Input.Output,'LLH')
+elseif strcmp(Input.Output,'LLH') || strcmp(Input.Output,'LPPD')
     Prior=1; % uniform prior
 end
 
@@ -240,13 +240,10 @@ if isfield(Input,'PDF') && Input.PDF==1
     LLH.error_c=p_error_c; % PDF of categorical error
 else
     LLH=-sum(log(p_LH)); % Negative LLH
-    if abs(LLH)==Inf || isnan(LLH)
-        LLH=exp(666); % LLH should be a real value
-    end
 end
 
     % Posterior
-    LP=log(Prior)+LLH; % likelihood*prior
+    LP=-log(Prior)+LLH; % likelihood*prior
     
 end
 
@@ -257,6 +254,12 @@ elseif strcmp(Input.Output,'LLH')
     Output=LLH;
 elseif strcmp(Input.Output,'Prior')
     Output=Prior;
+elseif strcmp(Input.Output,'LPPD')
+    Output=log(p_LH);
+end
+
+if any(abs(Output))==Inf || any(isnan(Output))
+    Output=realmax('double'); % Output should be a real value
 end
 
 end
@@ -272,9 +275,8 @@ kappa_1=param(2); % Unit resource
 % Gamma prior for unit resource
 p0(2)=gampdf(kappa_1,3,5);
 kappa_r=param(3); % Response variability
-% Cauchy prior for response noise
-% copy-paste from MemToolbox here
-p0(3)=2/(pi+kappa_r.^2);
+% Gamma prior for response noise
+p0(3)=gampdf(kappa_r,3,5);
 kappa_c=param(4); % categorical memory precision
 % Gamma prior for categorical memory precision
 p0(4)=gampdf(kappa_c,3,5);

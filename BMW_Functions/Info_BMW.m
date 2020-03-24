@@ -42,8 +42,10 @@ if nargin==1
             Info.AIC=0;
             Info.AICc=0;
             Info.BIC=0;
-            Info.DIC=0;
-            Info.WAIC=0;
+            Info.DIC=1;
+            Info.DICs=0;
+            Info.WAIC1=0;
+            Info.WAIC2=1;
             Info.LME=1;
         case 'Fit Options'
             if ~isfield(Q,'Algorithm')
@@ -81,6 +83,10 @@ if nargin==1
                         Info.Display='iter';
                     case 'fmincon: interior-point'
                         Info.Algorithm='fmincon: interior-point';
+                        Info.MaxIter=4000;
+                        Info.Display='iter';
+                     case 'fmincon: active-set'
+                        Info.Algorithm='fmincon: active-set';
                         Info.MaxIter=4000;
                         Info.Display='iter';
                 end

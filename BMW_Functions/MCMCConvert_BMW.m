@@ -15,6 +15,28 @@ if nargin<3
     Method='InverseFisher';
 end
 switch Method
+    case 'Probit' % [lb, ub]=>(-Inf, +Inf)
+        % first project from the given interval to [-1,1]
+        NewParam0=(Param-LB)*2./Range-1;
+        % do Probit Transform
+        NewParam=erfinv(NewParam0);
+    case 'InverseProbit' % (-Inf, +Inf)=>[lb, ub]
+        % do Transform
+        NewParam0=erf(Param);
+        % project parameters from [-1,1] to the given interval
+        NewParam=(NewParam0+1).*Range/2+LB;
+    case 'Logit' % [lb,ub]=>(-Inf, +Inf)
+        % first do preliminary projection
+        NewParam0=(Param-LB)./Range;
+        % do Logit Transform
+        NewParam=log(NewParam0)-log(1-NewParam0);
+    case 'InverseLogit' % (-Inf, +Inf)=>[lb,ub]
+        % check bound
+        Param(Param<-700)=-700;
+        % do Inverse-Logit Transform
+        NewParam0=1./(1+exp(-Param));
+        % further scaling
+        NewParam=NewParam0*Range-LB;
     case 'Fisher' % [lb, ub] => (-Inf, +Inf) 
         % first project from the given interval to [-1,1]
         NewParam0=(Param-LB)*2./Range-1;

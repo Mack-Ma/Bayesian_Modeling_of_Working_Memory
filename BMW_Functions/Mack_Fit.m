@@ -121,8 +121,15 @@ elseif strcmp(FitOptions.Algorithm,'DE-MCMC')
         Model_MCMC.Model=Model;
         Model_MCMC.Constraints=Constraints;
         % check start values
-        if size(Model_MCMC.Constraints.start,1)==1
-            Model_MCMC.Constraints.start=repmat(Model_MCMC.Constraints.start,[4,1]);
+        if size(Model_MCMC.Constraints.start,1)<=2
+            start_update=zeros(4,size(Model_MCMC.Constraints.start,2));
+            start_update(1:size(Model_MCMC.Constraints.start,1),:)=Model_MCMC.Constraints.start;
+            for chain=1:4-size(Model_MCMC.Constraints.start,1)
+                start_update(size(Model_MCMC.Constraints.start,1)+chain,:)=...
+                    Model_MCMC.Constraints.start(randsample(1:size(Model_MCMC.Constraints.start,1),1),:)+...
+                    0.02*rand(1,size(Model_MCMC.Constraints.start,2))-0.01;
+            end
+            Model_MCMC.Constraints.start=start_update;
         end
         Config_MCMC.Algorithm='DE';
         if isfield(FitOptions,'MCMCoptions')
@@ -143,8 +150,15 @@ elseif strcmp(FitOptions.Algorithm,'MH-MCMC')
         Model_MCMC.Model=Model;
         Model_MCMC.Constraints=Constraints;
         % check start values
-        if size(Model_MCMC.Constraints.start,1)==1
-            Model_MCMC.Constraints.start=repmat(Model_MCMC.Constraints.start,[2*size(Model_MCMC.Constraints.start,2)+1,1]);
+        if size(Model_MCMC.Constraints.start,1)<=2
+            start_update=zeros(4,size(Model_MCMC.Constraints.start,2));
+            start_update(1:size(Model_MCMC.Constraints.start,1),:)=Model_MCMC.Constraints.start;
+            for chain=1:4-size(Model_MCMC.Constraints.start,1)
+                start_update(size(Model_MCMC.Constraints.start,1)+chain,:)=...
+                    Model_MCMC.Constraints.start(randsample(1:size(Model_MCMC.Constraints.start,1),1),:)+...
+                    0.02*rand(1,size(Model_MCMC.Constraints.start,2))-0.01;
+            end
+            Model_MCMC.Constraints.start=start_update;
         end
         Config_MCMC.Algorithm='MH';
         if isfield(FitOptions,'MCMCoptions')
@@ -160,7 +174,7 @@ if ~exist('LP_Mack','var')
     error('Sorry, the algorithm is invalid...')
 end
 
-Quality.LP=-LP_Mack;
+Quality.Output=-LP_Mack;
 Param=Param_Mack;
 
 end

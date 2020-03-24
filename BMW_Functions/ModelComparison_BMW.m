@@ -72,10 +72,6 @@ switch Input.Criterion
         MC_BMW.LLH.BestModel=LLH_BestModel;
         MC_BMW.LLH.LLH_GLR=LLH_GLR;
         MC_BMW.LLH.delta_LLH=delta_LLH;
-        % 2nd Level RFX-BMS
-        BMC_Results=Mack_BMC(LLH_models', Opt_BMC);
-        MC_BMW.LLH.ModelFreq=BMC_Results.r;
-        MC_BMW.LLH.EP=BMC_Results.EP;
     case 'AIC'
         delta_AIC=zeros(Nmodel,Nmodel,Nsubj);
         AIC_weight=zeros(Nmodel,Nsubj);
@@ -99,10 +95,6 @@ switch Input.Criterion
         MC_BMW.AIC.AIC_GLR=AIC_GLR;
         MC_BMW.AIC.delta_AIC=delta_AIC;
         MC_BMW.AIC.AIC_weight=AIC_weight;
-        % 2nd Level RFX-BMS
-        BMC_Results=Mack_BMC(-AIC_models'/2, Opt_BMC);
-        MC_BMW.AIC.ModelFreq=BMC_Results.r;
-        MC_BMW.AIC.EP=BMC_Results.EP;
     case 'AICc'
         delta_AICc=zeros(Nmodel,Nmodel,Nsubj);
         AICc_weight=zeros(Nmodel,Nsubj);
@@ -126,10 +118,6 @@ switch Input.Criterion
         MC_BMW.AICc.AICc_GLR=AICc_GLR;
         MC_BMW.AICc.delta_AICc=delta_AICc;
         MC_BMW.AICc.AICc_weight=AICc_weight;
-        % 2nd Level RFX-BMS
-        BMC_Results=Mack_BMC(-AICc_models'/2, Opt_BMC);
-        MC_BMW.AICc.ModelFreq=BMC_Results.r;
-        MC_BMW.AICc.EP=BMC_Results.EP;
     case 'BIC'
         delta_BIC=zeros(Nmodel,Nmodel,Nsubj);
         BIC_PPr=zeros(Nmodel,Nsubj);
@@ -156,12 +144,11 @@ switch Input.Criterion
         MC_BMW.BIC.BIC_PPr=BIC_PPr;
         % 2nd Level RFX-BMS
         BMC_Results=Mack_BMC(-BIC_models'/2, Opt_BMC);
-        MC_BMW.BIC.ModelFreq=BMC_Results.r;
-        MC_BMW.BIC.EP=BMC_Results.EP;
+        MC_BMW.AIC.ModelFreq=BMC_Results.r;
+        MC_BMW.AIC.EP=BMC_Results.EP;
     case 'DIC'
         delta_DIC=zeros(Nmodel,Nmodel,Nsubj);
         DIC_PPr=zeros(Nmodel,Nsubj);
-        DIC_GBF=ones(Nmodel,Nmodel);
         DIC_BestModel=zeros(Nsubj,1);
         DIC_models=zeros(Nsubj,Nmodel);
         for subj=1:Nsubj
@@ -173,43 +160,68 @@ switch Input.Criterion
                 delta_DIC_benchmark=delta_DIC(model1,:,subj)-min(delta_DIC(model1,:,subj));
                 DIC_PPr(model1,subj)=exp(-delta_DIC_benchmark(model1)/2)/sum(exp(-delta_DIC_benchmark/2));
             end
-            DIC_GBF=DIC_GBF.*(DIC_PPr(:,subj)*(ones(Nmodel,1)./DIC_PPr(:,subj))');
             DIC_BestModel(subj)=find(DIC_models(subj,:)==min(DIC_models(subj,:)));
         end
         MC_BMW.DIC.BestModel=DIC_BestModel;
-        MC_BMW.DIC.DIC_GBF=DIC_GBF;
         MC_BMW.DIC.delta_DIC=delta_DIC;
         MC_BMW.DIC.DIC_PPr=DIC_PPr;
-        % 2nd Level RFX-BMS
-        BMC_Results=Mack_BMC(DIC_models', Opt_BMC);
-        MC_BMW.DIC.ModelFreq=BMC_Results.r;
-        MC_BMW.DIC.EP=BMC_Results.EP;
-    case 'WAIC'
-        delta_WAIC=zeros(Nmodel,Nmodel,Nsubj);
-        WAIC_PPr=zeros(Nmodel,Nsubj);
-        WAIC_GBF=ones(Nmodel,Nmodel);
-        WAIC_BestModel=zeros(Nsubj,1);
+    case 'DICs'
+        delta_DICs=zeros(Nmodel,Nmodel,Nsubj);
+        DICs_PPr=zeros(Nmodel,Nsubj);
+        DICs_BestModel=zeros(Nsubj,1);
+        DICs_models=zeros(Nsubj,Nmodel);
         for subj=1:Nsubj
-            WAIC_models=zeros(1,Nmodel);
             for model1=1:Nmodel
-                WAIC_models(model1)=Q_BMW{model1}.WAIC(subj);
+                DICs_models(subj,model1)=Q_BMW{model1}.DICs(subj);
                 for model2=1:Nmodel
-                    delta_WAIC(model1,model2,:)=Q_BMW{model2}.WAIC-Q_BMW{model1}.WAIC;
+                    delta_DICs(model1,model2,:)=Q_BMW{model2}.DICs-Q_BMW{model1}.DICs;
                 end
-                delta_WAIC_benchmark=delta_WAIC(model1,:,subj)-min(delta_WAIC(model1,:,subj));
-                WAIC_PPr(model1,subj)=exp(-delta_WAIC_benchmark(model1)/2)/sum(exp(-delta_WAIC_benchmark/2));
+                delta_DICs_benchmark=delta_DICs(model1,:,subj)-min(delta_DICs(model1,:,subj));
+                DICs_PPr(model1,subj)=exp(-delta_DICs_benchmark(model1)/2)/sum(exp(-delta_DICs_benchmark/2));
             end
-            WAIC_GBF=WAIC_GBF.*(WAIC_PPr(:,subj)*(ones(Nmodel,1)./WAIC_PPr(:,subj))');
-            WAIC_BestModel(subj)=find(WAIC_models==min(WAIC_models));
+            DICs_BestModel(subj)=find(DICs_models(subj,:)==min(DICs_models(subj,:)));
         end
-        MC_BMW.WAIC.BestModel=WAIC_BestModel;
-        MC_BMW.WAIC.WAIC_GBF=WAIC_GBF;
-        MC_BMW.WAIC.delta_WAIC=delta_WAIC;
-        MC_BMW.WAIC.WAIC_PPr=WAIC_PPr;
-        % 2nd Level RFX-BMS
-        BMC_Results=Mack_BMC(MC_BMW.WAIC.WAIC_PPr, Opt_BMC);
-        MC_BMW.WAIC.ModelFreq=BMC_Results.r;
-        MC_BMW.WAIC.EP=BMC_Results.EP;
+        MC_BMW.DICs.BestModel=DICs_BestModel;
+        MC_BMW.DICs.delta_DICs=delta_DICs;
+        MC_BMW.DICs.DICs_PPr=DICs_PPr;
+    case 'WAIC1'
+        delta_WAIC1=zeros(Nmodel,Nmodel,Nsubj);
+        WAIC1_PPr=zeros(Nmodel,Nsubj);
+        WAIC1_BestModel=zeros(Nsubj,1);
+        for subj=1:Nsubj
+            WAIC1_models=zeros(1,Nmodel);
+            for model1=1:Nmodel
+                WAIC1_models(model1)=Q_BMW{model1}.WAIC1(subj);
+                for model2=1:Nmodel
+                    delta_WAIC1(model1,model2,:)=Q_BMW{model2}.WAIC1-Q_BMW{model1}.WAIC1;
+                end
+                delta_WAIC1_benchmark=delta_WAIC1(model1,:,subj)-min(delta_WAIC1(model1,:,subj));
+                WAIC1_PPr(model1,subj)=exp(-delta_WAIC1_benchmark(model1)/2)/sum(exp(-delta_WAIC1_benchmark/2));
+            end
+            WAIC1_BestModel(subj)=find(WAIC1_models==min(WAIC1_models));
+        end
+        MC_BMW.WAIC1.BestModel=WAIC1_BestModel;
+        MC_BMW.WAIC1.delta_WAIC1=delta_WAIC1;
+        MC_BMW.WAIC1.WAIC1_PPr=WAIC1_PPr;
+    case 'WAIC2'
+        delta_WAIC2=zeros(Nmodel,Nmodel,Nsubj);
+        WAIC2_PPr=zeros(Nmodel,Nsubj);
+        WAIC2_BestModel=zeros(Nsubj,1);
+        for subj=1:Nsubj
+            WAIC2_models=zeros(1,Nmodel);
+            for model1=1:Nmodel
+                WAIC2_models(model1)=Q_BMW{model1}.WAIC2(subj);
+                for model2=1:Nmodel
+                    delta_WAIC2(model1,model2,:)=Q_BMW{model2}.WAIC2-Q_BMW{model1}.WAIC2;
+                end
+                delta_WAIC2_benchmark=delta_WAIC2(model1,:,subj)-min(delta_WAIC2(model1,:,subj));
+                WAIC2_PPr(model1,subj)=exp(-delta_WAIC2_benchmark(model1)/2)/sum(exp(-delta_WAIC2_benchmark/2));
+            end
+            WAIC2_BestModel(subj)=find(WAIC2_models==min(WAIC2_models));
+        end
+        MC_BMW.WAIC2.BestModel=WAIC2_BestModel;
+        MC_BMW.WAIC2.delta_WAIC2=delta_WAIC2;
+        MC_BMW.WAIC2.WAIC2_PPr=WAIC2_PPr;
     case 'LME'
         delta_LME=zeros(Nmodel,Nmodel,Nsubj);
         LME_Group=zeros(Nmodel,Nsubj);

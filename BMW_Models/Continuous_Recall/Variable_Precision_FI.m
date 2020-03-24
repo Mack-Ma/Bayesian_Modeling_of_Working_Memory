@@ -1,8 +1,8 @@
 %% Variable Precision (Using Fisher Information)
 %
-% Define the Variable Precision with Capacity model
+% Define the Variable Precision model (Using Fisher Information)
 % ------------
-% Output=Variable_Precision_with_Capacity(param, Data, Input)
+% Output=Variable_Precision_FI(param, Data, Input)
 %
 % ## Theory ##
 % This model assumed that there's a fixed, discrete, item-based capacity limit and
@@ -139,7 +139,7 @@ kappa_max=700; % Computational limit
 SampleSeed=1000; % Monte Carlo seed
 if strcmp(Input.Output,'LP') || strcmp(Input.Output,'Prior')
     Prior=prior(param, Input, SS_range); % get prior
-elseif strcmp(Input.Output,'LLH')
+elseif strcmp(Input.Output,'LLH') || strcmp(Input.Output,'LPPD')
     Prior=1; % uniform prior
 end
 
@@ -260,7 +260,7 @@ if ~strcmp(Input.Output,'Prior')
     end
     
     % Posterior
-    LP=log(Prior)+LLH; % likelihood*prior
+    LP=-log(Prior)+LLH; % likelihood*prior
     
 end
 
@@ -271,6 +271,12 @@ elseif strcmp(Input.Output,'LLH')
     Output=LLH;
 elseif strcmp(Input.Output,'Prior')
     Output=Prior;
+elseif strcmp(Input.Output,'LPPD')
+    Output=log(LH);
+end
+
+if any(abs(Output))==Inf || any(isnan(Output))
+    Output=realmax('double'); % Output should be a real value
 end
 
 end
@@ -286,21 +292,20 @@ tau=param(2); % Resource allocation variability
 % prior for tau
 % Note that here we simplified the theoretical conjugate prior of
 % gamma distribution for convenience
-p0(2)=2.^(-0.05*tau)./tau.^(-2);
+p0(2)=2.^(-0.05*tau)./tau.^(-2)/48040;
 % check power
 if length(SS_range)~=1
     Nparam=3;
     power=param(Nparam); % decay rate
-    % exponential prior for power (improper)
-    p0(Nparam)=exp(-power);
+    % gamma prior for power
+    p0(Nparam)=gampdf(power,1.5,1);
 else
     Nparam=2;
 end
 Nparam=Nparam+1;
 kappa_r=param(Nparam); % Response variability
-% Cauchy prior for response noise
-% copy-paste from MemToolbox here
-p0(Nparam)=2./(pi+kappa_r.^2);
+% Gamma prior for response noise
+p0(Nparam)=gampdf(kappa_r,3,5);
 if ~isfield(Input,'Variants') % No Variants
     Input.Variants.Bias=0;
     Input.Variants.Swap=0;

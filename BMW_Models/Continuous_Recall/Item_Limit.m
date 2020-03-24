@@ -124,7 +124,7 @@ if Input.Variants.Swap==1
 end
 if strcmp(Input.Output,'LP') || strcmp(Input.Output,'Prior')
     Prior=prior(param, Input); % get prior
-elseif strcmp(Input.Output,'LLH')
+elseif strcmp(Input.Output,'LLH') || strcmp(Input.Output,'LPPD')
     Prior=1; % uniform prior
 end
 
@@ -236,10 +236,12 @@ elseif strcmp(Input.Output,'LLH')
     Output=LLH;
 elseif strcmp(Input.Output,'Prior')
     Output=Prior;
+elseif strcmp(Input.Output,'LPPD')
+    Output=log(p_LH);
 end
 
-if abs(Output)==Inf || isnan(Output)
-    Output=exp(666); % Output should be a real value
+if any(abs(Output)==Inf) || any(isnan(Output))
+    Output=realmax('double'); % Output should be a real value
 end
 
 end

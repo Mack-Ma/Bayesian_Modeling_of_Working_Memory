@@ -82,11 +82,11 @@ end
 if ~isfield(config,'Convergence')
     config.Convergence.Diagnostic='GR'; % set conventional GR as the default way to diagnose convergence
     config.Convergence.Nbatchburnin=500*Nparam; % number of burn-in samples per batch
-    config.Convergence.Nmaxbatchburnin=10; % max number of burn-in batches
+    config.Convergence.Nmaxbatchburnin=25; % max number of burn-in batches
 else
     if ~isfield(config.Convergence,'Diagnostic'), config.Convergence.Diagnostic='GR'; end
     if ~isfield(config.Convergence,'Nbatchburnin'), config.Convergence.Nbatchburnin=500*Nparam; end
-    if ~isfield(config.Convergence,'Nmaxbatchburnin'), config.Convergence.Nmaxbatchburnin=10; end
+    if ~isfield(config.Convergence,'Nmaxbatchburnin'), config.Convergence.Nmaxbatchburnin=25; end
 end
 if ~isfield(config,'Transform')
     config.Transform=1;
@@ -104,7 +104,7 @@ if strcmp(config.Algorithm,'DE') % Differential Evolution
         % which might partly depend on Gelman et al., 1996,
         % with some adaptation
         gamma=2.38/sqrt(2*Nparam); % scales the difference vector
-        eps=0.001; % random jitter (the range of the uniform distribution)
+        eps=0.01; % random jitter (the range of the uniform distribution)
     else
         gamma=config.MCMCparam(1);
         eps=config.MCMCparam(2:end);
@@ -112,11 +112,15 @@ if strcmp(config.Algorithm,'DE') % Differential Evolution
 elseif strcmp(config.Algorithm,'MH') % Metropolis-Hastings
     % We adopt the proposed defaults in Haario, Saksman, & Tamminen, 2001
     % which might depend on Gelman et al., 1996 as well.
-    cov=((min(model.ub-model.lb)/10)^2/Nparam)*eye(Nparam); % initial covariance matrix of the multivariate gaussian transition kernel
+    if Transform==0
+      cov=((min(model.Constraints.ub-model.Constraints.lb)/10)^2/Nparam)*eye(Nparam); % initial covariance matrix of the multivariate gaussian transition kernel
+    else
+      cov=(2.38^2/Nparam)*eye(Nparam);
+    end
     if ~isfield(config,'MCMCparam') % default
         Sd=2.38^2/Nparam; % scales the estimated covariance of the past samples
         t0=2*Nparam; % the start point of adaptation, assign 0 to call off the adaptation
-        eps=(model.Constraints.ub-model.Constraints.lb)/100; % scales the constant that avoids the covariance matrix from being singular
+        eps=0.01; % scales the constant that avoids the covariance matrix from being singular
     else
         Sd=config.MCMCparam(1);
         t0=config.MCMCparam(2);
@@ -141,19 +145,19 @@ if strcmp(config.Algorithm,'DE') % Differential Evolution
     end
     % set initial start value
     if Transform==1
-        start=MCMCConvert_BMW(model.Constraints.start,model.Constraints.ub,model.Constraints.lb,'Fisher'); % do transform
+        start=MCMCConvert_BMW(model.Constraints.start,model.Constraints.ub,model.Constraints.lb,'Probit'); % do transform
     else
-        start=model.Constraints.start; % use ture parameter value (constrain the transition kernel instead)
+        start=model.Constraints.start; % use true parameter value (constrain the transition kernel instead)
     end
     count=0; % number of finished burn-in batches
     while 1
         if count>=MAXbatchburnin
             if strcmp(config.Verbosity,'notify')
-                warning('Reached the max number of burn-in samples without convergence...\n')
+                fprintf('\nReached the max number of burn-in samples without convergence...\n\r')
             end
             if strcmp(config.Verbosity,'iter')
-                warning('Reached the max number of burn-in samples without convergence...\n')
-                disp('Now start generate valid samples...\n')
+                fprintf('\nReached the max number of burn-in samples without convergence...\n\r')
+                fprintf('Now start generate valid samples...\n')
             end
             Summary.ConvergenceNbatch=0;
             break;
@@ -176,7 +180,7 @@ if strcmp(config.Algorithm,'DE') % Differential Evolution
                     ChainLot=randsample(ChainRange,2); % ramdomly pick two chains without repetition
                     ChainDiff=gamma*(PrevState(ChainLot(1),:)-PrevState(ChainLot(2),:)); % get difference vector
                     DiffNum=randsample(1:Nparam,1);
-                    ChainDiff(DiffNum)=randsample([0,1,1,1,1],1)*ChainDiff(DiffNum);
+                    ChainDiff(DiffNum)=randsample([1,0],1)*ChainDiff(DiffNum);
                     UniNoise=2*eps.*rand(1,length(eps))-abs(eps); % noise
                     PropState=PrevState(chain,:)+ChainDiff+UniNoise; % proposal state
                     if Transform==0
@@ -191,8 +195,8 @@ if strcmp(config.Algorithm,'DE') % Differential Evolution
                 minMHr=rand; % sample Metropolis-Hastings ratio threshold
                 switch Transform
                     case 1
-                        TruePropState=MCMCConvert_BMW(PropState,model.Constraints.ub,model.Constraints.lb,'InverseFisher');
-                        TruePrevState=MCMCConvert_BMW(PrevState(chain,:),model.Constraints.ub,model.Constraints.lb,'InverseFisher');
+                        TruePropState=MCMCConvert_BMW(PropState,model.Constraints.ub,model.Constraints.lb,'InverseProbit');
+                        TruePrevState=MCMCConvert_BMW(PrevState(chain,:),model.Constraints.ub,model.Constraints.lb,'InverseProbit');
                     case 0
                         TruePropState=PropState;
                         TruePrevState=PrevState(chain,:);
@@ -212,10 +216,10 @@ if strcmp(config.Algorithm,'DE') % Differential Evolution
         end
         count=count+1;
         % diagnose convergence
-        [Convergence, Stat]=TestConvergence(BurninSamples,0.1,config.Convergence.Diagnostic); % set threshold of R as 1.1
+        [Convergence, Stat]=TestConvergence(BurninSamples,0.075,config.Convergence.Diagnostic); % set threshold of R as 1.075
         ConvergenceStat(count)=Stat;
         if strcmp(config.Verbosity,'iter')
-            fprintf('%d/%d samples generated, R=%d\n',count*Nburnin, MAXbatchburnin*Nburnin, Stat)
+            fprintf('%d samples generated, R=%d\n',count*Nburnin, Stat)
         end
         switch Convergence
             case 1
@@ -258,8 +262,8 @@ if strcmp(config.Algorithm,'DE') % Differential Evolution
             % test proposal state
             switch Transform
                 case 1
-                    TruePropState=MCMCConvert_BMW(PropState,model.Constraints.ub,model.Constraints.lb,'InverseFisher');
-                    TruePrevState=MCMCConvert_BMW(PrevState(chain,:),model.Constraints.ub,model.Constraints.lb,'InverseFisher');
+                    TruePropState=MCMCConvert_BMW(PropState,model.Constraints.ub,model.Constraints.lb,'InverseProbit');
+                    TruePrevState=MCMCConvert_BMW(PrevState(chain,:),model.Constraints.ub,model.Constraints.lb,'InverseProbit');
                 case 0
                     TruePropState=PropState;
                     TruePrevState=PrevState(chain,:);
@@ -281,7 +285,7 @@ if strcmp(config.Algorithm,'DE') % Differential Evolution
             if Transform==1, TrueSamples(chain,:,state)=TrueCurrentState; end
         end
         if strcmp(config.Verbosity,'iter') && mod(state*Nchain,500)<Nchain && state*Nchain/500>=1
-            fprintf('%d samples collected after convergence...\n', state*Nchain)
+            fprintf('%d/%d samples collected after convergence...\n', state*Nchain, config.Nsample)
         end
     end
     if strcmp(config.Verbosity,'iter') || strcmp(config.Verbosity,'notify') || strcmp(config.Verbosity,'final')
@@ -292,15 +296,20 @@ elseif strcmp(config.Algorithm,'MH') % Metropolis-Hastings
     if strcmp(config.Verbosity,'iter')
         fprintf('\n\nNow start MCMC sampling based on MH \n\n')
     end
-    start=model.Constraints.start; % initial start value
+    % set initial values
+    if Transform==1
+        start=MCMCConvert_BMW(model.Constraints.start,model.Constraints.ub,model.Constraints.lb,'Probit'); % do transform
+    else
+        start=model.Constraints.start; % use true parameter value (constrain the transition kernel instead)
+    end
     count=0; % number of finished burn-in batches
     while 1
         if count>=MAXbatchburnin
             if strcmp(config.Verbosity,'notify')
-                warning('Reached the max number of burn-in samples without convergence...\n')
+                fprintf('Reached the max number of burn-in samples without convergence...\n')
             end
             if strcmp(config.Verbosity,'iter')
-                warning('Reached the max number of burn-in samples without convergence...\n')
+                fprintf('Reached the max number of burn-in samples without convergence...\n')
                 fprintf('Now start generate valid samples...\n')
             end
             Summary.ConvergenceNbatch=0;
@@ -309,7 +318,9 @@ elseif strcmp(config.Algorithm,'MH') % Metropolis-Hastings
         BurninSamples=zeros(Nchain, Nparam, Nbatchburnin);
         BurninPosterior=zeros(Nchain, Nbatchburnin);
         % generate burn-in samples till convergence
+        state_count=0;
         for state=1:Nbatchburnin
+            state_count=state_count+1;
             for chain=1:Nchain
                 % update proposal distribution
                 if state==1
@@ -317,17 +328,20 @@ elseif strcmp(config.Algorithm,'MH') % Metropolis-Hastings
                 else
                     % append the past samples to the start value
                     % use inverse to avoid the problem of Nparam and (state-1) being equal
-                    History=vertcat(model.Constraints.start,reshape(BurninSamples(chain,:,1:(state-1)),[Nparam, state-1])');
+                    History=vertcat(start(chain,:),reshape(BurninSamples(chain,:,1:(state-1)),[Nparam, state-1])');
                 end
-                cov=UpdateCov(cov,History,Sd,t0,eps); % adapt the tuning parameters based on the history of sampling
+                if state_count==10 % every ten steps
+                    cov=UpdateCov(cov,History,Sd,t0,eps); % adapt the tuning parameters based on the history of sampling
+                    state_count=0;
+                end
                 % generate proposal state
                 PrevState=History(end,:); % get previous state
                 PropState=mvnrnd(PrevState,cov); % sample from multivariate normal distribution
                 % test proposal state
                 switch Transform
                     case 1
-                        TruePropState=MCMCConvert_BMW(PropState,model.Constraints.ub,model.Constraints.lb,'InverseFisher');
-                        TruePrevState=MCMCConvert_BMW(PrevState,model.Constraints.ub,model.Constraints.lb,'InverseFisher');
+                        TruePropState=MCMCConvert_BMW(PropState,model.Constraints.ub,model.Constraints.lb,'InverseProbit');
+                        TruePrevState=MCMCConvert_BMW(PrevState,model.Constraints.ub,model.Constraints.lb,'InverseProbit');
                     case 0
                         TruePropState=PropState;
                         TruePrevState=PrevState;
@@ -348,10 +362,11 @@ elseif strcmp(config.Algorithm,'MH') % Metropolis-Hastings
         end
         count=count+1;
         % diagnose convergence
-        [Convergence, Stat]=TestConvergence(BurninSamples,0.1,config.Convergence.Diagnostic); % use conventional GR statistics here
+        [Convergence, Stat]=TestConvergence(BurninSamples,0.075,config.Convergence.Diagnostic); % use conventional GR statistics here
+        if isnan(Stat), Stat=0; end
         ConvergenceStat(count)=Stat;
         if strcmp(config.Verbosity,'iter')
-            fprintf('%d/%d samples generated, R=%d\n',count*Nbatchburnin, MAXbatchburnin*Nbatchburnin, Stat)
+            fprintf('%d burn-in samples generated, R=%d\n',count*Nbatchburnin, Stat)
         end
         switch Convergence
             case 1
@@ -365,7 +380,9 @@ elseif strcmp(config.Algorithm,'MH') % Metropolis-Hastings
     end
     % generate valid samples after convergence
     restart=BurninSamples(:, :, end);
+    state_count=0;
     for state=1:Nstate
+        state_count=state_count+1;
         for chain=1:Nchain
             % update proposal distribution
             if state==1
@@ -373,16 +390,19 @@ elseif strcmp(config.Algorithm,'MH') % Metropolis-Hastings
             else
                 % append the past samples to the start value
                 % use inverse to avoid the problem of Nparam and (state-1) being equal
-                History=vertcat(model.start,reshape(Samples(chain,:,1:(state-1)),[Nparam, state-1])');
+                History=vertcat(restart(chain,:),reshape(Samples(chain,:,1:(state-1)),[Nparam, state-1])');
             end
-            cov=UpdateCov(cov,History,Sd,t0,eps); % adapt the tuning parameters based on the history of sampling
+            if state_count==10
+                cov=UpdateCov(cov,History,Sd,t0,eps); % adapt the tuning parameters based on the history of sampling
+                state_count=0;
+            end
             % generate proposal state
             PrevState=History(end,:); % get previous state
             PropState=mvnrnd(PrevState,cov); % sample from multivariate normal distribution
             switch Transform
                 case 1
-                    TruePropState=MCMCConvert_BMW(PropState,model.Constraints.ub,model.Constraints.lb,'InverseFisher');
-                    TruePrevState=MCMCConvert_BMW(PrevState(chain,:),model.Constraints.ub,model.Constraints.lb,'InverseFisher');
+                    TruePropState=MCMCConvert_BMW(PropState,model.Constraints.ub,model.Constraints.lb,'InverseProbit');
+                    TruePrevState=MCMCConvert_BMW(PrevState,model.Constraints.ub,model.Constraints.lb,'InverseProbit');
                 case 0
                     TruePropState=PropState;
                     TruePrevState=PrevState(chain,:);
@@ -397,7 +417,7 @@ elseif strcmp(config.Algorithm,'MH') % Metropolis-Hastings
                 if Transform==1, TrueCurrentState=TruePropState; end
                 Posterior(chain,state)=PropPosterior; % record posterior
             else
-                CurrentState=PrevState(chain,:); % reject, use the previous state instead
+                CurrentState=PrevState; % reject, use the previous state instead
                 if Transform==1, TrueCurrentState=TruePrevState; end
                 Posterior(chain,state)=PrevPosterior;
             end
@@ -405,7 +425,7 @@ elseif strcmp(config.Algorithm,'MH') % Metropolis-Hastings
             if Transform==1, TrueSamples(chain,:,state)=TrueCurrentState; end
         end
         if strcmp(config.Verbosity,'iter') && mod(state*Nchain,500)<Nchain && state*Nchain/500>=1
-            fprintf('%d samples collected...\n', state*Nchain)
+            fprintf('%d/%d samples collected...\n', state*Nchain, config.Nsample)
         end
     end
     if strcmp(config.Verbosity,'iter') || strcmp(config.Verbosity,'notify') || strcmp(config.Verbosity,'final')
@@ -421,7 +441,7 @@ RawSampling.logPosterior=zeros(Nstate*Nchain, 1);
 RawSampling.Chain=zeros(Nstate*Nchain, 1);
 for chain=1:Nchain
     if Transform==1
-        RawSampling.RawSamples((chain-1)*Nstate+1:chain*Nstate,:)=permute(TrueSamples(chain, :, :),[3, 2, 1]); % raw sample values
+        RawSampling.RawSamples((chain-1)*Nstate+1:chain*Nstate,:)=permute(Samples(chain, :, :),[3, 2, 1]); % raw sample values
     end
     RawSampling.Samples((chain-1)*Nstate+1:chain*Nstate,:)=permute(TrueSamples(chain, :, :),[3, 2, 1]); % sample values
     RawSampling.logPosterior((chain-1)*Nstate+1:chain*Nstate)=Posterior(chain, :)'; % posterior values
@@ -429,7 +449,7 @@ for chain=1:Nchain
 end
 
 %% Summary Statistics
-[Summary.MAXposterior, IndMAXposterior]=max(exp(min(RawSampling.logPosterior))); % max of posterior density
+[Summary.MAXposterior, IndMAXposterior]=max(RawSampling.logPosterior); % max of posterior density
 Summary.FitParam=RawSampling.Samples(IndMAXposterior,:); % best parameter(s)
 
 %% Epilogue

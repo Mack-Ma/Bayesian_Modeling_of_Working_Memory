@@ -126,7 +126,7 @@ if Input.Variants.Swap==1
 end
 if strcmp(Input.Output,'LP') || strcmp(Input.Output,'Prior')
     Prior=prior(param, Input, length(kappa_SS)); % get prior
-elseif strcmp(Input.Output,'LLH')
+elseif strcmp(Input.Output,'LLH') || strcmp(Input.Output,'LPPD')
     Prior=1; % uniform prior
 end
 
@@ -242,10 +242,12 @@ elseif strcmp(Input.Output,'LLH')
     Output=LLH;
 elseif strcmp(Input.Output,'Prior')
     Output=Prior;
+elseif strcmp(Input.Output,'LPPD')
+    Output=log(p_LH);
 end
 
-if abs(Output)==Inf || isnan(LLH)
-    Output=exp(666); % LP should be a real value
+if any(abs(Output))==Inf || any(isnan(LLH))
+    Output=realmax('double'); % LP should be a real value
 end
 
 end
@@ -256,7 +258,7 @@ function p=prior(param, Input, Nkappa)
 % Specify parameters
 K=param(1); % Capacity
 % weibull prior for capacity
-p0(1)=wblpdf(K,3.5,3); % given that K is ofter 3~4
+p0(1)=wblpdf(K,3.5,3); % given that K is often 3~4
 kappa_SS=param(2:1+Nkappa); % precision
 % Gamma prior for precision
 p0(2:1+Nkappa)=gampdf(kappa_SS,3,10);
