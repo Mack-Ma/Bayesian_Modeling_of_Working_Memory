@@ -1,4 +1,4 @@
-%% Mack Fit
+%% BMW Fit
 % Fit designated model by MLE/MAP
 % Assess designated model by calculating LP
 % -----------------------
@@ -7,11 +7,11 @@
 % Memory, Attention & Cognition (MAC) Lab,
 % 8/31/2019
 %
-% Bug reports or any other feedbacks please contact M.T. (mack_ma2018@outlook.com)
-% BMW toolbox: https://github.com/Mack-Ma/Bayesian_Modeling_of_Working_Memory
+% Bug reports or any other feedbacks please contact M.T. (BMW_ma2018@outlook.com)
+% BMW toolbox: https://github.com/BMW-Ma/Bayesian_Modeling_of_Working_Memory
 %
 
-function [Param, Quality]=Mack_Fit(Data, Config, Model, Constraints, FitOptions)
+function [Param, Quality]=BMW_Fit(Data, Config, Model, Constraints, FitOptions)
 
 if nargin==4 || isempty(FitOptions)
     FitOptions.Algorithm='DE-MCMC'; % set MCMC as default
@@ -35,7 +35,7 @@ if strcmp(FitOptions.Algorithm,'fmincon: sqp')
             FitOptions.fminconOptions.StepTolerance=1e-6;
         end
         FitOptions.fminconOptions.Algorithm='sqp';
-        eval(['[Param_Mack, LP_Mack, Exitflag, Output]=fmincon(@(Param)',Model,'(Param, Data, Config), Constraints.start,[],[],[],[],Constraints.lb, Constraints.ub, [], FitOptions.fminconOptions);'])
+        eval(['[Param_BMW, LP_BMW, Exitflag, Output]=fmincon(@(Param)',Model,'(Param, Data, Config), Constraints.start,[],[],[],[],Constraints.lb, Constraints.ub, [], FitOptions.fminconOptions);'])
 
 elseif strcmp(FitOptions.Algorithm,'fmincon: interior-point')
     %% fmincon: interior-point
@@ -51,7 +51,7 @@ elseif strcmp(FitOptions.Algorithm,'fmincon: interior-point')
             FitOptions.fminconOptions.StepTolerance=1e-6;
         end
         FitOptions.fminconOptions.Algorithm='interior-point';
-        eval(['[Param_Mack, LP_Mack, Exitflag, Output]=fmincon(@(Param)',Model,'(Param, Data, Config), Constraints.start,[],[],[],[],Constraints.lb, Constraints.ub, [], FitOptions.fminconOptions);'])
+        eval(['[Param_BMW, LP_BMW, Exitflag, Output]=fmincon(@(Param)',Model,'(Param, Data, Config), Constraints.start,[],[],[],[],Constraints.lb, Constraints.ub, [], FitOptions.fminconOptions);'])
 
 elseif strcmp(FitOptions.Algorithm,'fmincon: active-set')
     %% fmincon: active-set
@@ -67,7 +67,7 @@ elseif strcmp(FitOptions.Algorithm,'fmincon: active-set')
             FitOptions.fminconOptions.StepTolerance=1e-6;
         end
         FitOptions.fminconOptions.Algorithm='active-set';
-        eval(['[Param_Mack, LP_Mack, Exitflag, Output]=fmincon(@(Param)',Model,'(Param, Data, Config), Constraints.start,[],[],[],[],Constraints.lb, Constraints.ub, [], FitOptions.fminconOptions);'])
+        eval(['[Param_BMW, LP_BMW, Exitflag, Output]=fmincon(@(Param)',Model,'(Param, Data, Config), Constraints.start,[],[],[],[],Constraints.lb, Constraints.ub, [], FitOptions.fminconOptions);'])
         
 elseif strcmp(FitOptions.Algorithm,'BADS')
         %% bads
@@ -79,7 +79,7 @@ elseif strcmp(FitOptions.Algorithm,'BADS')
         if ~isfield(FitOptions,'badsOptions')
             FitOptions.badsOptions=bads('defaults');
         end
-        eval(['[Param_Mack, LP_Mack, Exitflag, Output] = bads(@(Param)' Model, '(Param, Data, Config), Constraints.start, Constraints.lb, Constraints.ub, Constraints.lb, Constraints.ub, [], FitOptions.badsOptions);'])
+        eval(['[Param_BMW, LP_BMW, Exitflag, Output] = bads(@(Param)' Model, '(Param, Data, Config), Constraints.start, Constraints.lb, Constraints.ub, Constraints.lb, Constraints.ub, [], FitOptions.badsOptions);'])
         
 elseif strcmp(FitOptions.Algorithm,'MADS')
         %% mads
@@ -89,7 +89,7 @@ elseif strcmp(FitOptions.Algorithm,'MADS')
         if ~exist('patternsearch','file')
             error('Error: Global Optimization toolbox is needed.')
         end
-        eval(['[Param_Mack, LP_Mack, Exitflag, Output] = patternsearch(@(Param)' Model, '(Param, Data, Config), Constraints.start, [], [], [], [], Constraints.lb, Constraints.ub, [], FitOptions.madsOptions);'])
+        eval(['[Param_BMW, LP_BMW, Exitflag, Output] = patternsearch(@(Param)' Model, '(Param, Data, Config), Constraints.start, [], [], [], [], Constraints.lb, Constraints.ub, [], FitOptions.madsOptions);'])
                 
 elseif strcmp(FitOptions.Algorithm,'GA')
         %% Genetic Algorithm
@@ -98,7 +98,7 @@ elseif strcmp(FitOptions.Algorithm,'GA')
         if ~exist('ga','file')
             error('Error: Global Optimization toolbox is needed.')
         end
-        eval(['[Param_Mack, LP_Mack, Exitflag, Output] = ga(@(Param)' Model, '(Param, Data, Config), length(Constraints.start), [], [], [], [], Constraints.lb, Constraints.ub, [], FitOptions.gaOptions);'])
+        eval(['[Param_BMW, LP_BMW, Exitflag, Output] = ga(@(Param)' Model, '(Param, Data, Config), length(Constraints.start), [], [], [], [], Constraints.lb, Constraints.ub, [], FitOptions.gaOptions);'])
         
 elseif strcmp(FitOptions.Algorithm,'SA')
         %% Simulated Annealing
@@ -107,15 +107,15 @@ elseif strcmp(FitOptions.Algorithm,'SA')
         if ~exist('simulannealbnd','file')
             error('Error: Global Optimization toolbox is needed.')
         end
-        eval(['[Param_Mack, LP_Mack, Exitflag, Output] = simulannealbnd(@(Param)' Model, '(Param, Data, Config), Constraints.start, Constraints.lb, Constraints.ub, FitOptions.saOptions);'])
+        eval(['[Param_BMW, LP_BMW, Exitflag, Output] = simulannealbnd(@(Param)' Model, '(Param, Data, Config), Constraints.start, Constraints.lb, Constraints.ub, FitOptions.saOptions);'])
         
 elseif strcmp(FitOptions.Algorithm,'DE-MCMC')
         %% DE-MCMC
         % Default algorithm
         % Differential Evolution Monte Carlo Markov Chain
         % Built-in function in Bayesian Modeling of Working Memory (BMW) Toolbox
-        if ~exist('Mack_MCMC','file')
-            error('Error: Mack_MCMC function not detected.')
+        if ~exist('BMW_MCMC','file')
+            error('Error: BMW_MCMC function not detected.')
         end
         Model_MCMC=Config;
         Model_MCMC.Model=Model;
@@ -135,16 +135,16 @@ elseif strcmp(FitOptions.Algorithm,'DE-MCMC')
         if isfield(FitOptions,'MCMCoptions')
             Config_MCMC=FitOptions.MCMCoptions;
         end
-        [MCMCResult,OptResult]=Mack_MCMC(Model_MCMC, Data, Config_MCMC);
-        Param_Mack=OptResult.FitParam;
-        LP_Mack=log(OptResult.MAXposterior);
+        [MCMCResult,OptResult]=BMW_MCMC(Model_MCMC, Data, Config_MCMC);
+        Param_BMW=OptResult.FitParam;
+        LP_BMW=log(OptResult.MAXposterior);
         Quality.MCMCResult=MCMCResult;
 elseif strcmp(FitOptions.Algorithm,'MH-MCMC')
         %% MH-MCMC
         % (Adaptive) Metropolis-Hastings Monte Carlo Markov Chain
         % Built-in function in Bayesian Modeling of Working Memory (BMW) Toolbox
-        if ~exist('Mack_MCMC','file')
-            error('Error: Mack_MCMC function not detected.')
+        if ~exist('BMW_MCMC','file')
+            error('Error: BMW_MCMC function not detected.')
         end
         Model_MCMC=Config;
         Model_MCMC.Model=Model;
@@ -164,17 +164,17 @@ elseif strcmp(FitOptions.Algorithm,'MH-MCMC')
         if isfield(FitOptions,'MCMCoptions')
             Config_MCMC=FitOptions.MCMCoptions;
         end
-        [MCMCResult,OptResult]=Mack_MCMC(Model_MCMC, Data, Config_MCMC);
-        Param_Mack=OptResult.FitParam;
-        LP_Mack=log(OptResult.MAXposterior);
+        [MCMCResult,OptResult]=BMW_MCMC(Model_MCMC, Data, Config_MCMC);
+        Param_BMW=OptResult.FitParam;
+        LP_BMW=log(OptResult.MAXposterior);
         Quality.MCMCResult=MCMCResult;
 end
 
-if ~exist('LP_Mack','var')
+if ~exist('LP_BMW','var')
     error('Sorry, the algorithm is invalid...')
 end
 
-Quality.Output=-LP_Mack;
-Param=Param_Mack;
+Quality.Output=-LP_BMW;
+Param=Param_BMW;
 
 end

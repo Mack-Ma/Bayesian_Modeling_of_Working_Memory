@@ -3,7 +3,7 @@
 % Sampling by Monte Carlo Markov Chain Algorithm (Adaptive Metropolis-Hastings/Differential Evolution)
 %
 % -----------------------
-% [RawSampling, Summary]=Mack_MCMC(model, data, config)
+% [RawSampling, Summary]=BMW_MCMC(model, data, config)
 %
 % ## Input ##
 % - model
@@ -59,12 +59,12 @@
 % Memory, Attention & Cognition (MAC) Lab,
 % 3/3/2020
 %
-% Bug reports or any other feedbacks please contact M.T. (mack_ma2018@outlook.com)
+% Bug reports or any other feedbacks please contact M.T. (BMW_ma2018@outlook.com)
 % BMW toolbox:
-% https://github.com/Mack-Ma/Bayesian_Modeling_of_Working_Memory
+% https://github.com/BMW-Ma/Bayesian_Modeling_of_Working_Memory
 %
 
-function [RawSampling, Summary]=Mack_MCMC(model, data, config)
+function [RawSampling, Summary]=BMW_MCMC(model, data, config)
 
 %% Prologue
 % set default

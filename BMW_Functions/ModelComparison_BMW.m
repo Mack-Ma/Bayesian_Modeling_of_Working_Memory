@@ -16,8 +16,8 @@
 % Memory, Attention & Cognition (MAC) Lab,
 % 10/2/2019
 %
-% Bug reports or any other feedbacks please contact M.T. (mack_ma2018@outlook.com)
-% BMW toolbox: https://github.com/Mack-Ma/Bayesian_Modeling_of_Working_Memory
+% Bug reports or any other feedbacks please contact M.T. (BMW_ma2018@outlook.com)
+% BMW toolbox: https://github.com/BMW-Ma/Bayesian_Modeling_of_Working_Memory
 %
 
 function [MC_BMW]=ModelComparison_BMW(Input)
@@ -143,7 +143,7 @@ switch Input.Criterion
         MC_BMW.BIC.delta_BIC=delta_BIC;
         MC_BMW.BIC.BIC_PPr=BIC_PPr;
         % 2nd Level RFX-BMS
-        BMC_Results=Mack_BMC(-BIC_models'/2, Opt_BMC);
+        BMC_Results=BMW_BMC(-BIC_models'/2, Opt_BMC);
         MC_BMW.AIC.ModelFreq=BMC_Results.r;
         MC_BMW.AIC.EP=BMC_Results.EP;
     case 'DIC'
@@ -243,7 +243,7 @@ switch Input.Criterion
         MC_BMW.LME.LME_GBF=LME_GBF;
         MC_BMW.LME.delta_LME=delta_LME;
         % 2nd Level RFX-BMS
-        BMC_Results=Mack_BMC(LME_Group, Opt_BMC);
+        BMC_Results=BMW_BMC(LME_Group, Opt_BMC);
         MC_BMW.LME.ModelFreq=BMC_Results.r;
         MC_BMW.LME.EP=BMC_Results.EP;
 end

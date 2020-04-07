@@ -13,8 +13,8 @@
 % Memory, Attention & Cognition (MAC) Lab,
 % 10/2/2019
 %
-% Bug reports or any other feedbacks please contact M.T. (mack_ma2018@outlook.com)
-% BMW toolbox: https://github.com/Mack-Ma/Working_Memory_Modeling_Toolbox
+% Bug reports or any other feedbacks please contact M.T. (Mack_ma2018@outlook.com)
+% BMW toolbox: https://github.com/Mack-Ma/Bayesian_Modeling_of_Working_Memory
 %
 
 
@@ -42,7 +42,7 @@ WAIC1=zeros(Nsubj,1); WAIC2=zeros(Nsubj,1); LME=zeros(Nsubj,1);
 ModelName=MN_Convert_BMW(MA_BMW.Model.Model);
 fprintf('\nSubject: %s\n','1')
 Config_Fit=MA_BMW.Model;
-[Param0,Quality]=Mack_Fit(Data{1},Config_Fit,ModelName,MA_BMW.Constraints,MA_BMW.FitOptions);
+[Param0,Quality]=BMW_Fit(Data{1},Config_Fit,ModelName,MA_BMW.Constraints,MA_BMW.FitOptions);
 Ntrial=length(Data{1}.error);
 Nparam=length(Param0);
 Param=zeros(Nsubj,Nparam);
@@ -53,7 +53,7 @@ if Nsubj>1
     for subj=2:Nsubj
         fprintf('\nSubject: %s\n',num2str(subj))
         % Fit
-        [Param(subj,:),Quality]=Mack_Fit(Data{subj},Config_Fit,ModelName,MA_BMW.Constraints,MA_BMW.FitOptions);
+        [Param(subj,:),Quality]=BMW_Fit(Data{subj},Config_Fit,ModelName,MA_BMW.Constraints,MA_BMW.FitOptions);
         Quality_Fit{subj}=Quality;
         Output(subj)=Quality.Output;
     end
@@ -77,7 +77,7 @@ if any([MA_BMW.Criteria.LLH, MA_BMW.Criteria.AIC, MA_BMW.Criteria.AICc, MA_BMW.C
             for subj=1:Nsubj
                 fprintf('\nSubject: %s\n',num2str(subj))
                 % Fit
-                [~,Quality_MLE]=Mack_Fit(Data{subj},Config_Fit,ModelName,MA_BMW.Constraints,MA_BMW.FitOptions);
+                [~,Quality_MLE]=BMW_Fit(Data{subj},Config_Fit,ModelName,MA_BMW.Constraints,MA_BMW.FitOptions);
                 Output_MLE=Quality_MLE.Output;
                 if MA_BMW.Criteria.LLH==1, LLH(subj)=-Output_MLE; end
                 if MA_BMW.Criteria.AIC==1, AIC(subj)=-2*Output_MLE+2*Nparam; end
@@ -102,23 +102,23 @@ if any([MA_BMW.Criteria.LME, MA_BMW.Criteria.DIC, MA_BMW.Criteria.DICs, MA_BMW.C
             MCMCcur=Quality_Fit{subj}.MCMCResult;
             if MA_BMW.Criteria.LME==1 
                 Method.IC='LME_HarmonicMean';
-                LME(subj)=Mack_GetIC_MCMC(MCMCcur,Model_MCMC,Data{subj},Method); 
+                LME(subj)=BMW_GetIC_MCMC(MCMCcur,Model_MCMC,Data{subj},Method); 
             end
             if MA_BMW.Criteria.DIC==1 
                 Method.IC='DIC';
-                DIC(subj)=Mack_GetIC_MCMC(MCMCcur,Model_MCMC,Data{subj},Method); 
+                DIC(subj)=BMW_GetIC_MCMC(MCMCcur,Model_MCMC,Data{subj},Method); 
             end
             if MA_BMW.Criteria.DICs==1 
                 Method.IC='DIC*';
-                DICs(subj)=Mack_GetIC_MCMC(MCMCcur,Model_MCMC,Data{subj},Method); 
+                DICs(subj)=BMW_GetIC_MCMC(MCMCcur,Model_MCMC,Data{subj},Method); 
             end
             if MA_BMW.Criteria.WAIC1==1 
                 Method.IC='WAIC1';
-                WAIC1(subj)=Mack_GetIC_MCMC(MCMCcur,Model_MCMC,Data{subj},Method); 
+                WAIC1(subj)=BMW_GetIC_MCMC(MCMCcur,Model_MCMC,Data{subj},Method); 
             end
             if MA_BMW.Criteria.WAIC2==1 
                 Method.IC='WAIC2';
-                WAIC2(subj)=Mack_GetIC_MCMC(MCMCcur,Model_MCMC,Data{subj},Method); 
+                WAIC2(subj)=BMW_GetIC_MCMC(MCMCcur,Model_MCMC,Data{subj},Method); 
             end
         end
     else % do DE-MCMC to collect samples
@@ -138,26 +138,26 @@ if any([MA_BMW.Criteria.LME, MA_BMW.Criteria.DIC, MA_BMW.Criteria.DICs, MA_BMW.C
                 if isfield(FitOptions,'MCMCoptions')
                     Config_MCMC=FitOptions.MCMCoptions;
                 end
-                [MCMCcur,~]=Mack_MCMC(Model_MCMC, Data, Config_MCMC);
+                [MCMCcur,~]=BMW_MCMC(Model_MCMC, Data, Config_MCMC);
                 if MA_BMW.Criteria.LME==1
                     Method.IC='LME_HarmonicMean';
-                    LME(subj)=Mack_GetIC_MCMC(MCMCcur,Model_MCMC,Data{subj},Method);
+                    LME(subj)=BMW_GetIC_MCMC(MCMCcur,Model_MCMC,Data{subj},Method);
                 end
                 if MA_BMW.Criteria.DIC==1
                     Method.IC='DIC';
-                    DIC(subj)=Mack_GetIC_MCMC(MCMCcur,Model_MCMC,Data{subj},Method);
+                    DIC(subj)=BMW_GetIC_MCMC(MCMCcur,Model_MCMC,Data{subj},Method);
                 end
                 if MA_BMW.Criteria.DICs==1
                     Method.IC='DIC*';
-                    DICs(subj)=Mack_GetIC_MCMC(MCMCcur,Model_MCMC,Data{subj},Method);
+                    DICs(subj)=BMW_GetIC_MCMC(MCMCcur,Model_MCMC,Data{subj},Method);
                 end
                 if MA_BMW.Criteria.WAIC1==1
                     Method.IC='WAIC1';
-                    WAIC1(subj)=Mack_GetIC_MCMC(MCMCcur,Model_MCMC,Data{subj},Method);
+                    WAIC1(subj)=BMW_GetIC_MCMC(MCMCcur,Model_MCMC,Data{subj},Method);
                 end
                 if MA_BMW.Criteria.WAIC2==1
                     Method.IC='WAIC2';
-                    WAIC2(subj)=Mack_GetIC_MCMC(MCMCcur,Model_MCMC,Data{subj},Method);
+                    WAIC2(subj)=BMW_GetIC_MCMC(MCMCcur,Model_MCMC,Data{subj},Method);
                 end
             end
         end

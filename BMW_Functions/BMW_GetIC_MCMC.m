@@ -3,12 +3,12 @@
 % Extract the information criterion of interest from the MCMC outputs
 %
 % -----------------------
-% IC=Mack_GetIC_MCMC(Samples, Model, Data, Method)
+% IC=BMW_GetIC_MCMC(Samples, Model, Data, Method)
 %
 % ## Input ##
 % - Samples
 %   mat, contains posterior samples
-%   help Mack_MCMC for details
+%   help BMW_MCMC for details
 %
 % - Model
 %   struct, configures the model
@@ -55,12 +55,12 @@
 % Memory, Attention & Cognition (MAC) Lab,
 % 3/22/2020
 %
-% Bug reports or any other feedbacks please contact M.T. (mack_ma2018@outlook.com)
+% Bug reports or any other feedbacks please contact M.T. (BMW_ma2018@outlook.com)
 % BMW toolbox:
-% https://github.com/Mack-Ma/Bayesian_Modeling_of_Working_Memory
+% https://github.com/BMW-Ma/Bayesian_Modeling_of_Working_Memory
 %
 
-function IC=Mack_GetIC_MCMC(RawSampling, Model, Data, Method)
+function IC=BMW_GetIC_MCMC(RawSampling, Model, Data, Method)
 RawSamples=RawSampling.RawSamples;
 Samples=RawSampling.Samples;
 Posterior=RawSampling.logPosterior;

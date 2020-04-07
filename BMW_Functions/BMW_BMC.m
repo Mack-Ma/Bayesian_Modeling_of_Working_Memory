@@ -20,11 +20,11 @@
 % Memory, Attention & Cognition (MAC) Lab,
 % 10/2/2019
 %
-% Bug reports or any other feedbacks please contact M.T. (mack_ma2018@outlook.com)
-% BMW toolbox: https://github.com/Mack-Ma/Bayesian_Modeling_of_Working_Memory
+% Bug reports or any other feedbacks please contact M.T. (BMW_ma2018@outlook.com)
+% BMW toolbox: https://github.com/BMW-Ma/Bayesian_Modeling_of_Working_Memory
 %
 
-function [output]=Mack_BMC(LME,Config)
+function [output]=BMW_BMC(LME,Config)
 
 if isfield(Config, 'Start'), a0=Config.Start; 
 else a0=ones(size(LME,1),1); end % Start values of the parameters of the dirichlet prior

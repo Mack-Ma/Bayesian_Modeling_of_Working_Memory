@@ -16,9 +16,9 @@
 % Sun Yat-Sen University
 % 10/2/2019
 %
-% Bug reports or any other feedbacks please contact M.T. (mack_ma2018@outlook.com)
+% Bug reports or any other feedbacks please contact M.T. (BMW_ma2018@outlook.com)
 % BMW toolbox:
-% https://github.com/Mack-Ma/Bayesian_Modeling_of_Working_Memory
+% https://github.com/BMW-Ma/Bayesian_Modeling_of_Working_Memory
 %
 
 function [MA_BMW]=Configuration_BMW(Input)
