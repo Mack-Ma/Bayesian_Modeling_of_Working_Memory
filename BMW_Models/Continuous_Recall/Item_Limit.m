@@ -122,7 +122,7 @@ if Input.Variants.Swap==1
         samples_nt=Data.sample_nt;
     end
 end
-if strcmp(Input.Output,'LP') || strcmp(Input.Output,'Prior')
+if strcmp(Input.Output,'LP') || strcmp(Input.Output,'Prior')  || strcmp(Input.Output,'All')
     Prior=prior(param, Input); % get prior
 elseif strcmp(Input.Output,'LLH') || strcmp(Input.Output,'LPPD')
     Prior=1; % uniform prior
@@ -238,9 +238,14 @@ elseif strcmp(Input.Output,'Prior')
     Output=Prior;
 elseif strcmp(Input.Output,'LPPD')
     Output=log(p_LH);
+elseif strcmp(Input.Output,'All')
+    Output.LP=LP;
+    Output.LLH=LLH;
+    Output.Prior=Prior;
+    Output.LPPD=log(p_LH);
 end
 
-if any(abs(Output)==Inf) || any(isnan(Output))
+if ~isstruct(Output) && (any(abs(Output)==Inf) || any(isnan(Output)))
     Output=realmax('double'); % Output should be a real value
 end
 

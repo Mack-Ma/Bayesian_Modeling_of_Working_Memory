@@ -120,7 +120,7 @@ if Input.Variants.Swap==1
 end
 kappa_max=700; % Computational limit
 SampleSeed=1000; % Monte Carlo seed
-if strcmp(Input.Output,'LP') || strcmp(Input.Output,'Prior')
+if strcmp(Input.Output,'LP') || strcmp(Input.Output,'Prior') || strcmp(Input.Output,'All')
     Prior=prior(param, Input, SS_range); % get prior
 elseif strcmp(Input.Output,'LLH') || strcmp(Input.Output,'LPPD')
     Prior=1; % uniform prior
@@ -283,9 +283,14 @@ elseif strcmp(Input.Output,'Prior')
     Output=Prior;
 elseif strcmp(Input.Output, 'LPPD')
     Output=log(LH);
+elseif strcmp(Input.Output,'All')
+    Output.LP=LP;
+    Output.LLH=LLH;
+    Output.Prior=Prior;
+    Output.LPPD=log(p_LH);
 end
 
-if any(abs(Output))==Inf || any(isnan(Output))
+if ~isstruct(Output) && (any(abs(Output))==Inf || any(isnan(Output)))
     Output=realmax('double'); % Output should be a real value
 end
 

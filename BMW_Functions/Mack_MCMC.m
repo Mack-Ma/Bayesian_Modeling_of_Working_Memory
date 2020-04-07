@@ -74,19 +74,21 @@ if ~isfield(config,'Algorithm')
     config.Algorithm='DE'; % set DE as default algorithm
 end
 if ~isfield(config,'Nsample')
-    config.Nsample=2000*Nparam; % set default number of samples after convergence
+    config.Nsample=max(5000, 2000*Nparam); % set default number of samples after convergence
 end
 if ~isfield(config,'Verbosity')
     config.Verbosity='iter';
 end
 if ~isfield(config,'Convergence')
     config.Convergence.Diagnostic='GR'; % set conventional GR as the default way to diagnose convergence
-    config.Convergence.Nbatchburnin=500*Nparam; % number of burn-in samples per batch
-    config.Convergence.Nmaxbatchburnin=25; % max number of burn-in batches
+    config.Convergence.Nbatchburnin=200; % number of burn-in samples per batch
+    config.Convergence.Nmaxbatchburnin=50; % max number of burn-in batches
+    config.Convergence.Tol=0.1+log(Nparam)/10; % R threshold
 else
     if ~isfield(config.Convergence,'Diagnostic'), config.Convergence.Diagnostic='GR'; end
-    if ~isfield(config.Convergence,'Nbatchburnin'), config.Convergence.Nbatchburnin=500*Nparam; end
+    if ~isfield(config.Convergence,'Nbatchburnin'), config.Convergence.Nbatchburnin=200; end
     if ~isfield(config.Convergence,'Nmaxbatchburnin'), config.Convergence.Nmaxbatchburnin=25; end
+    if ~isfield(config.Convergence,'Tol'), config.Convergence.Tol=0.1+log(Nparam)/10; end
 end
 if ~isfield(config,'Transform')
     config.Transform=1;
@@ -97,6 +99,8 @@ Nburnin=config.Convergence.Nbatchburnin; % number of burn-in samples per batch p
 MAXbatchburnin=config.Convergence.Nmaxbatchburnin; % max number of burn-in batches per chain
 Nstate=ceil(config.Nsample/Nchain); % number of samples after convergence per chain
 Nbatchburnin=ceil(Nburnin/Nchain); % number of burn-in samples per batch per chain
+RealOutput=model.Output; % record real output mode (LLH/LP/Prior/LPPD)
+model.Output='All';
 % set tuning parameters
 if strcmp(config.Algorithm,'DE') % Differential Evolution
     if ~isfield(config,'MCMCparam') % default
@@ -133,7 +137,9 @@ end
 % pre-allocation
 TrueSamples=zeros(Nchain, Nparam, Nstate);
 Samples=zeros(Nchain,Nparam,Nstate);
-Posterior=zeros(Nchain,Nstate);
+logPosterior=zeros(Nchain,Nstate);
+logPrior=zeros(Nchain,Nstate);
+logLikelihood=zeros(Nchain,Nstate);
 ConvergenceStat=zeros(1,MAXbatchburnin);
 % shuffle random seed
 rng(now);
@@ -201,12 +207,14 @@ if strcmp(config.Algorithm,'DE') % Differential Evolution
                         TruePropState=PropState;
                         TruePrevState=PrevState(chain,:);
                 end
-                eval(['PropPosterior=-',model.Model,'(TruePropState, data, model);'])
-                eval(['PrevPosterior=-',model.Model,'(TruePrevState, data, model);'])
+                eval(['Prop0=',model.Model,'(TruePropState, data, model);'])
+                eval(['Prev0=',model.Model,'(TruePrevState, data, model);'])
+                eval(['PropPosterior=-Prop0.',RealOutput,';'])
+                eval(['PrevPosterior=-Prev0.',RealOutput,';'])
                 MHr=exp(PropPosterior-PrevPosterior); % current MH ratio
                 if MHr>minMHr
                     CurrentState=PropState; % accept proposal
-                    BurninPosterior(chain,state)=PropPosterior; % record posterior
+                    BurninPosterior(chain,state)=PropPosterior; % record Posterior
                 else
                     CurrentState=PrevState(chain,:); % reject, use the previous state instead
                     BurninPosterior(chain,state)=PrevPosterior;
@@ -216,7 +224,7 @@ if strcmp(config.Algorithm,'DE') % Differential Evolution
         end
         count=count+1;
         % diagnose convergence
-        [Convergence, Stat]=TestConvergence(BurninSamples,0.075,config.Convergence.Diagnostic); % set threshold of R as 1.075
+        [Convergence, Stat]=TestConvergence(BurninSamples,config.Convergence.Tol,config.Convergence.Diagnostic); % set threshold of R as 1.1
         ConvergenceStat(count)=Stat;
         if strcmp(config.Verbosity,'iter')
             fprintf('%d samples generated, R=%d\n',count*Nburnin, Stat)
@@ -232,6 +240,8 @@ if strcmp(config.Algorithm,'DE') % Differential Evolution
                 start=BurninSamples(:, :, end);
         end
     end
+    Ntrial=length(Prop0.LPPD); % record # trial
+    logPointwiseLH=zeros(Nchain,Ntrial,Nstate);
     % generate valid samples after convergence
     restart=BurninSamples(:, :, end);
     for state=1:Nstate % loop states
@@ -269,17 +279,25 @@ if strcmp(config.Algorithm,'DE') % Differential Evolution
                     TruePrevState=PrevState(chain,:);
             end
             minMHr=rand; % sample Metropolis-Hastings ratio threshold
-            eval(['PropPosterior=-',model.Model,'(TruePropState, data, model);'])
-            eval(['PrevPosterior=-',model.Model,'(TruePrevState, data, model);'])
+            eval(['Prop0=',model.Model,'(TruePropState, data, model);'])
+            eval(['Prev0=',model.Model,'(TruePrevState, data, model);'])
+            eval(['PropPosterior=-Prop0.',RealOutput,';'])
+            eval(['PrevPosterior=-Prev0.',RealOutput,';'])
             MHr=exp(PropPosterior-PrevPosterior); % current MH ratio
             if MHr>minMHr
                 CurrentState=PropState; % accept proposal
                 if Transform==1, TrueCurrentState=TruePropState; end
-                Posterior(chain,state)=PropPosterior; % record posterior
+                logPosterior(chain,state)=PropPosterior; % record logPosterior
+                logLikelihood(chain,state)=-Prop0.LLH; % record likelihood
+                logPrior(chain,state)=-Prop0.Prior; % record prior;
+                logPointwiseLH(chain,:,state)=-Prop0.LPPD; % record pointwise likelihood
             else
                 CurrentState=PrevState(chain,:); % reject, use the previous state instead
                 if Transform==1, TrueCurrentState=TruePrevState; end
-                Posterior(chain,state)=PrevPosterior;
+                logPosterior(chain,state)=PrevPosterior; % record logPosterior
+                logLikelihood(chain,state)=-Prev0.LLH; % record likelihood
+                logPrior(chain,state)=-Prev0.Prior; % record prior;
+                logPointwiseLH(chain,:,state)=-Prev0.LPPD; % record pointwise likelihood
             end
             Samples(chain,:,state)=CurrentState; % record sample value
             if Transform==1, TrueSamples(chain,:,state)=TrueCurrentState; end
@@ -347,12 +365,14 @@ elseif strcmp(config.Algorithm,'MH') % Metropolis-Hastings
                         TruePrevState=PrevState;
                 end
                 minMHr=rand; % sample Metropolis-Hastings ratio threshold
-                eval(['PropPosterior=-',model.Model,'(TruePropState, data, model);'])
-                eval(['PrevPosterior=-',model.Model,'(TruePrevState, data, model);'])
+                eval(['Prop0=',model.Model,'(TruePropState, data, model);'])
+                eval(['Prev0=',model.Model,'(TruePrevState, data, model);'])
+                eval(['PropPosterior=-Prop0.',RealOutput,';'])
+                eval(['PrevPosterior=-Prev0.',RealOutput,';'])
                 MHr=exp(PropPosterior-PrevPosterior)*(mvnpdf(PrevState,PropState,cov)/mvnpdf(PropState,PrevState,cov)); % current MH ratio
                 if MHr>minMHr
                     CurrentState=PropState; % accept proposal
-                    BurninPosterior(chain,state)=PropPosterior; % record posterior
+                    BurninPosterior(chain,state)=PropPosterior; % record logPosterior
                 else
                     CurrentState=PrevState; % reject, use the previous state instead
                     BurninPosterior(chain,state)=PrevPosterior;
@@ -362,7 +382,7 @@ elseif strcmp(config.Algorithm,'MH') % Metropolis-Hastings
         end
         count=count+1;
         % diagnose convergence
-        [Convergence, Stat]=TestConvergence(BurninSamples,0.075,config.Convergence.Diagnostic); % use conventional GR statistics here
+        [Convergence, Stat]=TestConvergence(BurninSamples,config.Convergence.Tol,config.Convergence.Diagnostic); % use conventional GR statistics here
         if isnan(Stat), Stat=0; end
         ConvergenceStat(count)=Stat;
         if strcmp(config.Verbosity,'iter')
@@ -378,6 +398,8 @@ elseif strcmp(config.Algorithm,'MH') % Metropolis-Hastings
                 start=BurninSamples(:, :, end);
         end
     end
+    Ntrial=length(Prop0.LPPD); % record # trial
+    logPointwiseLH=zeros(Nchain,Ntrial,Nstate);
     % generate valid samples after convergence
     restart=BurninSamples(:, :, end);
     state_count=0;
@@ -409,17 +431,25 @@ elseif strcmp(config.Algorithm,'MH') % Metropolis-Hastings
             end
             % test proposal state
             minMHr=rand; % sample Metropolis-Hastings ratio threshold
-            eval(['PropPosterior=-',model.Model,'(TruePropState, data, model);'])
-            eval(['PrevPosterior=-',model.Model,'(TruePrevState, data, model);'])
+            eval(['Prop0=',model.Model,'(TruePropState, data, model);'])
+            eval(['Prev0=',model.Model,'(TruePrevState, data, model);'])
+            eval(['PropPosterior=-Prop0.',RealOutput,';'])
+            eval(['PrevPosterior=-Prev0.',RealOutput,';'])
             MHr=exp(PropPosterior-PrevPosterior)*(mvnpdf(PrevState,PropState,cov)/mvnpdf(PropState,PrevState,cov)); % current MH ratio
             if MHr>minMHr
                 CurrentState=PropState; % accept proposal
                 if Transform==1, TrueCurrentState=TruePropState; end
-                Posterior(chain,state)=PropPosterior; % record posterior
+                logPosterior(chain,state)=PropPosterior; % record logPosterior
+                logLikelihood(chain,state)=-Prop0.LLH; % record likelihood
+                logPrior(chain,state)=-Prop0.Prior; % record prior;
+                logPointwiseLH(chain,:,state)=-Prop0.LPPD; % record pointwise likelihood
             else
                 CurrentState=PrevState; % reject, use the previous state instead
                 if Transform==1, TrueCurrentState=TruePrevState; end
-                Posterior(chain,state)=PrevPosterior;
+                logPosterior(chain,state)=PrevPosterior; % record logPosterior
+                logLikelihood(chain,state)=-Prev0.LLH; % record likelihood
+                logPrior(chain,state)=-Prev0.Prior; % record prior;
+                logPointwiseLH(chain,:,state)=-Prev0.LPPD; % record pointwise likelihood
             end
             Samples(chain,:,state)=CurrentState; % record sample value
             if Transform==1, TrueSamples(chain,:,state)=TrueCurrentState; end
@@ -438,18 +468,24 @@ if Transform==0, TrueSamples=Samples; end
 RawSampling.RawSamples=zeros(Nstate*Nchain, Nparam);
 RawSampling.Samples=zeros(Nstate*Nchain, Nparam);
 RawSampling.logPosterior=zeros(Nstate*Nchain, 1);
+RawSampling.logLikelihood=zeros(Nstate*Nchain, 1);
+RawSampling.logPointwiseLikelihood=zeros(Nstate*Nchain, Ntrial);
+RawSampling.logPrior=zeros(Nstate*Nchain, 1);
 RawSampling.Chain=zeros(Nstate*Nchain, 1);
 for chain=1:Nchain
     if Transform==1
         RawSampling.RawSamples((chain-1)*Nstate+1:chain*Nstate,:)=permute(Samples(chain, :, :),[3, 2, 1]); % raw sample values
     end
     RawSampling.Samples((chain-1)*Nstate+1:chain*Nstate,:)=permute(TrueSamples(chain, :, :),[3, 2, 1]); % sample values
-    RawSampling.logPosterior((chain-1)*Nstate+1:chain*Nstate)=Posterior(chain, :)'; % posterior values
+    RawSampling.logPosterior((chain-1)*Nstate+1:chain*Nstate)=logPosterior(chain, :)'; % Posterior values
+    RawSampling.logLikelihood((chain-1)*Nstate+1:chain*Nstate)=logLikelihood(chain, :)'; % Posterior values
+    RawSampling.logPrior((chain-1)*Nstate+1:chain*Nstate)=logPrior(chain, :)'; % Posterior values
+    RawSampling.logPointwiseLikelihood((chain-1)*Nstate+1:chain*Nstate,:)=permute(logPointwiseLH(chain, :, :),[3, 2, 1]); % Posterior values
     RawSampling.Chain((chain-1)*Nstate+1:chain*Nstate)=chain*ones(Nstate,1); % chain indices
 end
 
 %% Summary Statistics
-[Summary.MAXposterior, IndMAXposterior]=max(RawSampling.logPosterior); % max of posterior density
+[Summary.MAXposterior, IndMAXposterior]=max(RawSampling.logPosterior); % max of logPosterior density
 Summary.FitParam=RawSampling.Samples(IndMAXposterior,:); % best parameter(s)
 
 %% Epilogue

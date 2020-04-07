@@ -256,9 +256,14 @@ elseif strcmp(Input.Output,'Prior')
     Output=Prior;
 elseif strcmp(Input.Output,'LPPD')
     Output=log(p_LH);
+elseif strcmp(Input.Output,'All')
+    Output.LP=LP;
+    Output.LLH=LLH;
+    Output.Prior=Prior;
+    Output.LPPD=log(p_LH);
 end
 
-if any(abs(Output))==Inf || any(isnan(Output))
+if ~isstruct(Output) && (any(abs(Output))==Inf || any(isnan(Output)))
     Output=realmax('double'); % Output should be a real value
 end
 

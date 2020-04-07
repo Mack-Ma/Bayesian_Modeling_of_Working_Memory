@@ -38,10 +38,10 @@
 %       of mean as penalty
 %       'WAIC2', Watanabe-Akaike Information Criterion, which uses the
 %       sum of the pointwise variance of likelihood as penalty
-%       'LME_HarmonicMean', log model evidence, calculated by the general
-%       harmonic mean estimator
-%       'LME_BridgeSampling', log model evidence, calculated by bridge
-%       sampling
+%       'LME_HarmonicMean', log model evidence, calculated by the
+%       generalized harmonic mean estimator
+%       'LME_BridgeSampling', log model evidence, calculated by the
+%       bridge sampling estimator
 %
 % ## Output ##
 % - IC
@@ -64,11 +64,13 @@ function IC=Mack_GetIC_MCMC(RawSampling, Model, Data, Method)
 RawSamples=RawSampling.RawSamples;
 Samples=RawSampling.Samples;
 Posterior=RawSampling.logPosterior;
+Likelihood=RawSampling.logLikelihood;
+LPPD=RawSampling.logPointwiseLikelihood;
 Nsample=size(Samples,1);
 Nparam=size(Samples,2);
 % set default
 if nargin==3 || ~isfield(Method,'IC')
-    Method.IC='LME-BridgeSampling';
+    Method.IC='LME_HarmonicMean';
 end
 if nargin==3 || ~isfield(Method, 'Verbosity')
     Method.Verbosity=1;
@@ -77,14 +79,10 @@ end
 switch Method.IC
     case 'DIC' % get deviance information criterion
         if Method.Verbosity==1;
-            fprintf('\n Now start estimating DIC... \n\n')
+            fprintf('\nNow start estimating DIC... \n\n')
         end
         % get likelihood
-        LLH=zeros(1,Nsample);
-        Model.Output='LLH';
-        for i=1:Nsample
-            eval(['LLH(i)=-',Model.Model,'(Samples(i,:), Data, Model);'])
-        end
+        LLH=-Likelihood;
         % get posterior mean deviance (expected log likelihood)
         MDev=mean(2*LLH);
         % get deviance of mean
@@ -99,14 +97,10 @@ switch Method.IC
         end
     case 'DIC*' % the only difference between DIC & DIC* is that DIC* gives larger penalty to model complexity
         if Method.Verbosity==1;
-            fprintf('\n Now start estimating DIC*... \n\n')
+            fprintf('\nNow start estimating DIC*... \n\n')
         end
         % get likelihood
-        LLH=zeros(1,Nsample);
-        Model.Output='LLH';
-        for i=1:Nsample
-            eval(['LLH(i)=-',Model.Model,'(Samples(i,:), Data, Model);'])
-        end
+        LLH=-Likelihood;
         % get posterior mean deviance (expected log likelihood)
         MDev=mean(2*LLH);
         % get deviance of mean
@@ -124,19 +118,12 @@ switch Method.IC
             fprintf('\nNow start estimating WAIC1... \n\n')
         end
         % get log pointwise predictive density
-        Model.Output='LPPD';
-        eval(['lppd1=',Model.Model,'(Samples(1,:),Data,Model);'])
-        Ntrial=length(lppd1);
-        lppd=zeros(Nsample,Ntrial);
-        lppd(1,:)=lppd1;
-        for i=2:Nsample
-            eval(['lppd(i,:)=',Model.Model,'(Samples(i,:),Data,Model);'])
-        end
-        lppd0=mean(log(mean(exp(lppd),1)));
+        lppd=LPPD;
+        elppd=-2*sum(log(mean(exp(lppd),1)));
         % get penalty
-        p_waic1=2*mean(log(mean(exp(lppd),1))+mean(lppd,1));
+        p_waic1=2*sum(log(mean(exp(lppd),1)))-2*sum(mean(lppd,1));
         % WAIC
-        IC=lppd0-p_waic1;
+        IC=elppd-p_waic1;
         if Method.Verbosity==1;
             fprintf('Done!\n')
         end
@@ -145,49 +132,34 @@ switch Method.IC
             fprintf('\nNow start estimating WAIC2... \n\n')
         end
         % get log pointwise predictive density
-        Model.Output='LPPD';
-        eval(['lppd1=',Model.Model,'(Samples(1,:),Data,Model);'])
-        Ntrial=length(lppd1);
-        lppd=zeros(Nsample,Ntrial);
-        lppd(1,:)=lppd1;
-        for i=2:Nsample
-            eval(['lppd(i,:)=',Model.Model,'(Samples(i,:),Data,Model);'])
-        end
-        lppd0=mean(log(mean(exp(lppd),1)));
+        lppd=LPPD;
+        elppd=-2*sum(log(mean(exp(lppd),1)));
         % get penalty
-        p_waic2=sum(var(lppd));
+        p_waic2=0.5*sum(var(lppd,1));
         % WAIC
-        IC=lppd0-p_waic2;
+        IC=elppd-p_waic2;
         if Method.Verbosity==1;
             fprintf('Done!\n')
         end
-    case 'LME-HarmonicMean' % get log model evidence (marginal likelihood) through the generalized harmonic mean estimator
+    case 'LME_HarmonicMean' % get log model evidence (marginal likelihood) through the generalized harmonic mean estimator
         if Method.Verbosity==1;
-            fprintf('\n Now estimate marginal likelihood based on the generalized harmonic mean estimator... \n')
+            fprintf('\nNow estimate marginal likelihood based on the generalized harmonic mean estimator... \n')
         end
-        % I dont recommend this method given the problem of reaching computational limit
-        % And I hate the dogmaticity that the importance density brought in.
+        % I hate the dogmaticity that the importance density brought in.
         % Nonetheless, it's definitely faster than bridge sampling.
         % use the ML estimator to find the fittest proposal distribution
-        if Method.Verbosity==1;
-            fprintf('Constructing the proposal function... \n')
-        end
         % get the covariance matrix of the raw posterior samples
-        size(RawSamples)
         SampleCov=cov(RawSamples);
+        IDMean=mean(RawSamples);
         IDCov=SampleCov*(Nsample-1)/Nsample; % Unbiased estimator
-        if Method.Verbosity==1;
-            fprintf('Done!\n')
-            fprintf('Solving the estimator... \n')
-        end
         % get log importance density
         LP=Posterior;
         LID=zeros(Nsample,1);
         for i=1:Nsample
-            LID(i)=log(mvnpdf(RawSamples(i,:),[],IDCov)); % we use multivariate normal distribution
+            LID(i)=log(mvnpdf(RawSamples(i,:),IDMean,IDCov)); % we use multivariate normal distribution
         end
         % scaling
-        LID=LID*(max(LP)/max(LID));
+        LID=LID*(max(LP)-500/max(LID));
         % ID/posterior
         DR=exp(LID-LP);
         % test bounds (due to the computational limit)
@@ -195,7 +167,7 @@ switch Method.IC
         % harmonic mean estimator
         IC=-log((mean(DR)));
         if Method.Verbosity==1
-            fprintf('Done!\n',IC)
+            fprintf('Done!\n')
         end
     case 'LME_BridgeSampling' % get log model evidence (marginal likelihood) through bridge sampling
         if Method.Verbosity==1;
@@ -211,7 +183,7 @@ switch Method.IC
         SampleCov=cov(RawSamples);
         IDCov=SampleCov*(Nsample-1)/Nsample; % Unbiased estimator
         % Sampling based on the proposal distribution
-        Nprop=1000;
+        Nprop=Nsample/2;
         [PropSamples,PropID]=randmvn(Nprop,zeros(1,Nparam),IDCov);
         if Method.Verbosity==1;
             fprintf('Done!\n')
@@ -230,22 +202,23 @@ switch Method.IC
         % get L1 & L2
         LL1=Posterior-log(TarID);
         LL2=LPprop-log(PropID);
+        LLstar=median(LL1); % avoid reaching the computational limit, see https://osf.io/8x7m9/
         % use the optimal bridging function in Gronau et al, 2017
-        MaxT=2000;
-        ToleranceME=1e-6;
-        ME0=0.001; % initial guess
+        MaxT=10000;
+        ToleranceME=1e-10;
+        ME0=0; % initial guess
         s1=Nsample/(Nsample+Nprop);
         s2=Nprop/(Nsample+Nprop);
         for t=1:MaxT
-            ME1=mean(exp(LL2)./(s1*exp(LL2)+s2*ME0));
-            ME2=mean(1./(s1*exp(LL1)+s2*ME0));
+            ME1=sum(exp(LL2-LLstar)./(s1*exp(LL2-LLstar)+s2*ME0));
+            ME2=sum(1./(s1*exp(LL1-LLstar)+s2*ME0));
             if ME2==Inf
                 ME=realmin('double');
             else
-                ME=ME1/ME2;
+                ME=(s1/s2)*ME1/ME2;
             end
             % check tolerance
-            if abs(log(ME)-log(ME0))<=ToleranceME
+            if abs(1-ME0/ME)<=ToleranceME
                 MEfinal=ME;
                 fprintf('Converged!\n')
                 break;
@@ -254,13 +227,14 @@ switch Method.IC
         end
         if t==MaxT
             fprintf('Reach max number of interation, marginal likelihood didn''t converge...\n')
-            MEfinal=0;
+            MEfinal=ME;
         end
-        IC=log(MEfinal);
+        IC=log(MEfinal)+LLstar;
 end
 
 end
 
+% draw samples from mvn distribution based on DE-MCMC
 function [AllSamples, AllDensity]=randmvn(N,mean,covar)
 Nchain=5;
 Nsample=ceil(N/Nchain);

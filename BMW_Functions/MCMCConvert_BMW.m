@@ -1,6 +1,6 @@
 %% Convert parameters to fit MCMC
 %
-% Do transform between the totally real number field and a given real number subfield
+% Do transform between the full real number field and a given real number subfield
 %
 
 function NewParam=MCMCConvert_BMW(Param, UB, LB, Method)

@@ -1,12 +1,12 @@
 %% ModelFit_BMW
 %
-% Fit & assess the model designated by the MA_BMW.mat file
-% Write results in the original MA_BMW file
+% Fit & assess the model(s) designated by MA_BMW
+% Write results in the original MA_BMW variable
 % ------------
 % Output=ModelFit_BMW(Input)
 %
-% Input original MA_BMW.mat (after model definition & configuration),
-% write fit results in the original input file.
+% Input original MA_BMW (after model definition & configuration),
+% write fit results in the original input variable.
 % ------------
 % Programmed by Ma, Tianye
 % Under the instruction of Dr. Ku, Yixuan
@@ -60,7 +60,8 @@ if Nsubj>1
 end
 
 %% LLH, AIC, AICc, BIC
-if MA_BMW.Criteria.LLH==1 || MA_BMW.Criteria.AIC==1 || MA_BMW.Criteria.AICc==1 || MA_BMW.Criteria.BIC==1
+if any([MA_BMW.Criteria.LLH, MA_BMW.Criteria.AIC, MA_BMW.Criteria.AICc, MA_BMW.Criteria.BIC]==1)
+    fprintf('\nNow starting estimate LLH/AIC/AICc/BIC...\n')
     % Calculate LLH/AIC/AICc/BIC based on maximum likelihood
     if isfield(Config_Fit,'Output') && strcmp(Config_Fit.Output,'LLH') % test mode
         for subj=1:Nsubj
@@ -70,32 +71,37 @@ if MA_BMW.Criteria.LLH==1 || MA_BMW.Criteria.AIC==1 || MA_BMW.Criteria.AICc==1 |
             if MA_BMW.Criteria.BIC==1, BIC(subj)=-2*Output(subj)+Nparam*log(Ntrial); end
         end
     else % find max LLH instead
-        fprintf('Maximum likelihood is required for AIC/AICc/BIC...\n')
-        fprintf('Fit model(s) again based on MLE...\n')
-        for subj=1:Nsubj
-            fprintf('\nSubject: %s\n',num2str(subj))
-            % Fit
-            [~,Quality_MLE]=Mack_Fit(Data{subj},Config_Fit,ModelName,MA_BMW.Constraints,MA_BMW.FitOptions);
-            Output_MLE=Quality_MLE.Output;
-            if MA_BMW.Criteria.LLH==1, LLH(subj)=-Output_MLE; end
-            if MA_BMW.Criteria.AIC==1, AIC(subj)=-2*Output_MLE+2*Nparam; end
-            if MA_BMW.Criteria.AICc==1, AICc(subj)=-2*Output_MLE+2*Nparam+2*Nparam*(Nparam+1)/(Ntrial-Nparam-1); end
-            if MA_BMW.Criteria.BIC==1, BIC(subj)=-2*Output_MLE+Nparam*log(Ntrial); end
+        fprintf('\nMaximum likelihood is required for LLH/AIC/AICc/BIC...\n')
+        MoveOn=input('Do you want to fit model(s) again based on MLE? (y/n)\n','s');
+        if strcmp(MoveOn,'y')
+            for subj=1:Nsubj
+                fprintf('\nSubject: %s\n',num2str(subj))
+                % Fit
+                [~,Quality_MLE]=Mack_Fit(Data{subj},Config_Fit,ModelName,MA_BMW.Constraints,MA_BMW.FitOptions);
+                Output_MLE=Quality_MLE.Output;
+                if MA_BMW.Criteria.LLH==1, LLH(subj)=-Output_MLE; end
+                if MA_BMW.Criteria.AIC==1, AIC(subj)=-2*Output_MLE+2*Nparam; end
+                if MA_BMW.Criteria.AICc==1, AICc(subj)=-2*Output_MLE+2*Nparam+2*Nparam*(Nparam+1)/(Ntrial-Nparam-1); end
+                if MA_BMW.Criteria.BIC==1, BIC(subj)=-2*Output_MLE+Nparam*log(Ntrial); end
+            end
         end
     end
+    fprintf('\nDone!\n')
 end
 
 %% LME, DIC, DIC*, WAIC1, WAIC2
 % Calculate LME based on MCMC
-if MA_BMW.Criteria.LME==1
+if any([MA_BMW.Criteria.LME, MA_BMW.Criteria.DIC, MA_BMW.Criteria.DICs, MA_BMW.Criteria.WAIC1, MA_BMW.Criteria.WAIC2]==1)
+    fprintf('\nNow start estimate LME/DIC/DIC*/WAIC1/WAIC2...\n')
     if isfield(Quality,'MCMCResult')
         for subj=1:Nsubj
+            fprintf('\nSubject: %d',subj)
             Model_MCMC=Config_Fit;
             Model_MCMC.Model=ModelName;
             Model_MCMC.Constraints=MA_BMW.Constraints;
             MCMCcur=Quality_Fit{subj}.MCMCResult;
             if MA_BMW.Criteria.LME==1 
-                Method.IC='LME_BridgeSampling';
+                Method.IC='LME_HarmonicMean';
                 LME(subj)=Mack_GetIC_MCMC(MCMCcur,Model_MCMC,Data{subj},Method); 
             end
             if MA_BMW.Criteria.DIC==1 
@@ -116,41 +122,47 @@ if MA_BMW.Criteria.LME==1
             end
         end
     else % do DE-MCMC to collect samples
-        for subj=1:Nsubj
-            Model_MCMC=Config;
-            Model_MCMC.Model=Model;
-            Model_MCMC.Constraints=Constraints;
-            % check start values
-            if size(Model_MCMC.Constraints.start,1)==1
-                Model_MCMC.Constraints.start=repmat(Model_MCMC.Constraints.start,[4,1]);
-            end
-            Config_MCMC.Algorithm='DE';
-            if isfield(FitOptions,'MCMCoptions')
-                Config_MCMC=FitOptions.MCMCoptions;
-            end
-            [MCMCcur,~]=Mack_MCMC(Model_MCMC, Data, Config_MCMC);
-            if MA_BMW.Criteria.LME==1 
-                Method.IC='LME_BridgeSampling';
-                LME(subj)=Mack_GetIC_MCMC(MCMCcur,Model_MCMC,Data{subj},Method); 
-            end
-            if MA_BMW.Criteria.DIC==1 
-                Method.IC='DIC';
-                DIC(subj)=Mack_GetIC_MCMC(MCMCcur,Model_MCMC,Data{subj},Method); 
-            end
-            if MA_BMW.Criteria.DICs==1 
-                Method.IC='DIC*';
-                DICs(subj)=Mack_GetIC_MCMC(MCMCcur,Model_MCMC,Data{subj},Method); 
-            end
-            if MA_BMW.Criteria.WAIC1==1 
-                Method.IC='WAIC1';
-                WAIC1(subj)=Mack_GetIC_MCMC(MCMCcur,Model_MCMC,Data{subj},Method); 
-            end
-            if MA_BMW.Criteria.WAIC2==1 
-                Method.IC='WAIC2';
-                WAIC2(subj)=Mack_GetIC_MCMC(MCMCcur,Model_MCMC,Data{subj},Method); 
+        fprintf('\nBMW didn''t detect MCMC posterior samples...\n')
+        MoveOn=input('\nDo you want redo MCMC? (y/n)\n','s');
+        if strcmp(MoveOn,'y')
+            for subj=1:Nsubj
+                fprintf('Subject: %d\n',subj)
+                Model_MCMC=Config;
+                Model_MCMC.Model=Model;
+                Model_MCMC.Constraints=Constraints;
+                % check start values
+                if size(Model_MCMC.Constraints.start,1)==1
+                    Model_MCMC.Constraints.start=repmat(Model_MCMC.Constraints.start,[4,1]);
+                end
+                Config_MCMC.Algorithm='DE';
+                if isfield(FitOptions,'MCMCoptions')
+                    Config_MCMC=FitOptions.MCMCoptions;
+                end
+                [MCMCcur,~]=Mack_MCMC(Model_MCMC, Data, Config_MCMC);
+                if MA_BMW.Criteria.LME==1
+                    Method.IC='LME_HarmonicMean';
+                    LME(subj)=Mack_GetIC_MCMC(MCMCcur,Model_MCMC,Data{subj},Method);
+                end
+                if MA_BMW.Criteria.DIC==1
+                    Method.IC='DIC';
+                    DIC(subj)=Mack_GetIC_MCMC(MCMCcur,Model_MCMC,Data{subj},Method);
+                end
+                if MA_BMW.Criteria.DICs==1
+                    Method.IC='DIC*';
+                    DICs(subj)=Mack_GetIC_MCMC(MCMCcur,Model_MCMC,Data{subj},Method);
+                end
+                if MA_BMW.Criteria.WAIC1==1
+                    Method.IC='WAIC1';
+                    WAIC1(subj)=Mack_GetIC_MCMC(MCMCcur,Model_MCMC,Data{subj},Method);
+                end
+                if MA_BMW.Criteria.WAIC2==1
+                    Method.IC='WAIC2';
+                    WAIC2(subj)=Mack_GetIC_MCMC(MCMCcur,Model_MCMC,Data{subj},Method);
+                end
             end
         end
     end
+    fprintf('\nDone!\n')
 end
 
 %% Epilogue
@@ -158,7 +170,6 @@ MA_BMW.Param=Param;
 if isfield(MA_BMW.Criteria,'Output') && MA_BMW.Criteria.Output==1
     MA_BMW.Output=Output;
 end
-% MA_BMW.RMSEA=SE;
 MA_BMW.LLH=LLH;
 MA_BMW.AIC=AIC;
 MA_BMW.AICc=AICc;
@@ -173,6 +184,5 @@ if ischar(Input)
     cd(Dir)
     save('MA_BMW','MA_BMW');
 end
-fprintf('\nDone \n')
 
 end
