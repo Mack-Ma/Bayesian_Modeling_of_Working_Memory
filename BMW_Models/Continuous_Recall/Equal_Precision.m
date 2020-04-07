@@ -246,7 +246,7 @@ elseif strcmp(Input.Output,'All')
     Output.LPPD=log(p_LH);
 end
 
-if any(abs(Output))==Inf || any(isnan(Output))
+if ~isstruct(Output) || any(abs(Output))==Inf || any(isnan(Output))
     Output=realmax('double'); % Output should be a real value
 end
 

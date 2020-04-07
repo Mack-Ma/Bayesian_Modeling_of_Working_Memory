@@ -143,7 +143,7 @@ switch Method.IC
         end
     case 'LME_HarmonicMean' % get log model evidence (marginal likelihood) through the generalized harmonic mean estimator
         if Method.Verbosity==1;
-            fprintf('\nNow estimate marginal likelihood based on the generalized harmonic mean estimator... \n')
+            fprintf('\nNow estimate marginal likelihood based on the generalized harmonic mean estimator... \n\n')
         end
         % I hate the dogmaticity that the importance density brought in.
         % Nonetheless, it's definitely faster than bridge sampling.
