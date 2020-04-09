@@ -65,6 +65,7 @@ if any([MA_BMW.Criteria.LLH, MA_BMW.Criteria.AIC, MA_BMW.Criteria.AICc, MA_BMW.C
     % Calculate LLH/AIC/AICc/BIC based on maximum likelihood
     if isfield(Config_Fit,'Output') && strcmp(Config_Fit.Output,'LLH') % test mode
         for subj=1:Nsubj
+            fprintf('\nSubject: %s\n',num2str(subj))
             if MA_BMW.Criteria.LLH==1, LLH(subj)=-Output(subj); end
             if MA_BMW.Criteria.AIC==1, AIC(subj)=-2*Output(subj)+2*Nparam; end
             if MA_BMW.Criteria.AICc==1, AICc(subj)=-2*Output(subj)+2*Nparam+2*Nparam*(Nparam+1)/(Ntrial-Nparam-1); end

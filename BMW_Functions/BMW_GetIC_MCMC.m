@@ -73,7 +73,7 @@ if nargin==3 || ~isfield(Method,'IC')
     Method.IC='LME_HarmonicMean';
 end
 if nargin==3 || ~isfield(Method, 'Verbosity')
-    Method.Verbosity=1;
+    Method.Verbosity=0;
 end
 % get IC
 switch Method.IC
@@ -118,7 +118,7 @@ switch Method.IC
             fprintf('\nNow start estimating WAIC1... \n\n')
         end
         % get log pointwise predictive density
-        lppd=LPPD;
+        lppd=-LPPD;
         elppd=-2*sum(log(mean(exp(lppd),1)));
         % get penalty
         p_waic1=2*sum(log(mean(exp(lppd),1)))-2*sum(mean(lppd,1));
@@ -132,7 +132,7 @@ switch Method.IC
             fprintf('\nNow start estimating WAIC2... \n\n')
         end
         % get log pointwise predictive density
-        lppd=LPPD;
+        lppd=-LPPD;
         elppd=-2*sum(log(mean(exp(lppd),1)));
         % get penalty
         p_waic2=0.5*sum(var(lppd,1));
@@ -159,11 +159,12 @@ switch Method.IC
             LID(i)=log(mvnpdf(RawSamples(i,:),IDMean,IDCov)); % we use multivariate normal distribution
         end
         % scaling
-        LID=LID*(max(LP)-500/max(LID));
+        LID=LID*(max(LP)/max(LID));
         % ID/posterior
         DR=exp(LID-LP);
         % test bounds (due to the computational limit)
         DR(DR==Inf)=realmax('double')/Nsample;
+        DR(DR==-Inf)=realmin('double')*Nsample;
         % harmonic mean estimator
         IC=-log((mean(DR)));
         if Method.Verbosity==1
