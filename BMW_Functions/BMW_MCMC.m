@@ -79,6 +79,9 @@ end
 if ~isfield(config,'Verbosity')
     config.Verbosity='iter';
 end
+if ~isfield(config,'Transform')
+    config.Transform='Probit';
+end
 if ~isfield(config,'Convergence')
     config.Convergence.Diagnostic='GR'; % set conventional GR as the default way to diagnose convergence
     config.Convergence.Nbatchburnin=200; % number of burn-in samples per batch
@@ -90,10 +93,11 @@ else
     if ~isfield(config.Convergence,'Nmaxbatchburnin'), config.Convergence.Nmaxbatchburnin=25; end
     if ~isfield(config.Convergence,'Tol'), config.Convergence.Tol=0.1+log(Nparam)/10; end
 end
-if ~isfield(config,'Transform')
-    config.Transform=1;
+if strcmp(config.Transform,'NoTransform')
+    Transform=0;
+else
+    Transform=1;
 end
-Transform=config.Transform;
 % set initial values
 Nburnin=config.Convergence.Nbatchburnin; % number of burn-in samples per batch per chain
 MAXbatchburnin=config.Convergence.Nmaxbatchburnin; % max number of burn-in batches per chain
@@ -151,7 +155,7 @@ if strcmp(config.Algorithm,'DE') % Differential Evolution
     end
     % set initial start value
     if Transform==1
-        start=MCMCConvert_BMW(model.Constraints.start,model.Constraints.ub,model.Constraints.lb,'Probit'); % do transform
+        start=MCMCConvert_BMW(model.Constraints.start,model.Constraints.ub,model.Constraints.lb,config.Transform); % do transform
     else
         start=model.Constraints.start; % use true parameter value (constrain the transition kernel instead)
     end
@@ -186,7 +190,7 @@ if strcmp(config.Algorithm,'DE') % Differential Evolution
                     ChainLot=randsample(ChainRange,2); % ramdomly pick two chains without repetition
                     ChainDiff=gamma*(PrevState(ChainLot(1),:)-PrevState(ChainLot(2),:)); % get difference vector
                     DiffNum=randsample(1:Nparam,1);
-                    ChainDiff(DiffNum)=randsample([1,0],1)*ChainDiff(DiffNum);
+                    ChainDiff(DiffNum)=randsample([1,1,1,0],1)*ChainDiff(DiffNum);
                     UniNoise=2*eps.*rand(1,length(eps))-abs(eps); % noise
                     PropState=PrevState(chain,:)+ChainDiff+UniNoise; % proposal state
                     if Transform==0
@@ -201,8 +205,8 @@ if strcmp(config.Algorithm,'DE') % Differential Evolution
                 minMHr=rand; % sample Metropolis-Hastings ratio threshold
                 switch Transform
                     case 1
-                        TruePropState=MCMCConvert_BMW(PropState,model.Constraints.ub,model.Constraints.lb,'InverseProbit');
-                        TruePrevState=MCMCConvert_BMW(PrevState(chain,:),model.Constraints.ub,model.Constraints.lb,'InverseProbit');
+                        TruePropState=MCMCConvert_BMW(PropState,model.Constraints.ub,model.Constraints.lb,['Inverse', config.Transform]);
+                        TruePrevState=MCMCConvert_BMW(PrevState(chain,:),model.Constraints.ub,model.Constraints.lb,['Inverse', config.Transform]);
                     case 0
                         TruePropState=PropState;
                         TruePrevState=PrevState(chain,:);
@@ -224,7 +228,7 @@ if strcmp(config.Algorithm,'DE') % Differential Evolution
         end
         count=count+1;
         % diagnose convergence
-        [Convergence, Stat]=TestConvergence(BurninSamples,config.Convergence.Tol,config.Convergence.Diagnostic); % set threshold of R as 1.1
+        [Convergence, Stat]=TestConvergence(BurninSamples,config.Convergence.Tol,config.Convergence.Diagnostic); 
         ConvergenceStat(count)=Stat;
         if strcmp(config.Verbosity,'iter')
             fprintf('%d samples generated, R=%d\n',count*Nburnin, Stat)
@@ -258,7 +262,7 @@ if strcmp(config.Algorithm,'DE') % Differential Evolution
                 ChainLot=randsample(ChainRange,2); % ramdomly pick two chains without repetition
                 ChainDiff=gamma*(PrevState(ChainLot(1),:)-PrevState(ChainLot(2),:)); % get difference vector
                 DiffNum=randsample(1:Nparam,1);
-                ChainDiff(DiffNum)=randsample([0,1],1)*ChainDiff(DiffNum);
+                ChainDiff(DiffNum)=randsample([0,1,1,1],1)*ChainDiff(DiffNum);
                 UniNoise=2*eps.*rand(1,length(eps))-abs(eps); % noise
                 PropState=PrevState(chain,:)+ChainDiff+UniNoise; % proposal state
                 if Transform==0
@@ -272,8 +276,8 @@ if strcmp(config.Algorithm,'DE') % Differential Evolution
             % test proposal state
             switch Transform
                 case 1
-                    TruePropState=MCMCConvert_BMW(PropState,model.Constraints.ub,model.Constraints.lb,'InverseProbit');
-                    TruePrevState=MCMCConvert_BMW(PrevState(chain,:),model.Constraints.ub,model.Constraints.lb,'InverseProbit');
+                    TruePropState=MCMCConvert_BMW(PropState,model.Constraints.ub,model.Constraints.lb,['Inverse', config.Transform]);
+                    TruePrevState=MCMCConvert_BMW(PrevState(chain,:),model.Constraints.ub,model.Constraints.lb,['Inverse', config.Transform]);
                 case 0
                     TruePropState=PropState;
                     TruePrevState=PrevState(chain,:);
@@ -287,16 +291,16 @@ if strcmp(config.Algorithm,'DE') % Differential Evolution
             if MHr>minMHr
                 CurrentState=PropState; % accept proposal
                 if Transform==1, TrueCurrentState=TruePropState; end
-                logPosterior(chain,state)=PropPosterior; % record logPosterior
-                logLikelihood(chain,state)=-Prop0.LLH; % record likelihood
-                logPrior(chain,state)=-Prop0.Prior; % record prior;
+                logPosterior(chain,state)=PropPosterior; % record log posterior
+                logLikelihood(chain,state)=-Prop0.LLH; % record log likelihood
+                logPrior(chain,state)=-Prop0.Prior; % record prior
                 logPointwiseLH(chain,:,state)=-Prop0.LPPD; % record pointwise likelihood
             else
                 CurrentState=PrevState(chain,:); % reject, use the previous state instead
                 if Transform==1, TrueCurrentState=TruePrevState; end
-                logPosterior(chain,state)=PrevPosterior; % record logPosterior
-                logLikelihood(chain,state)=-Prev0.LLH; % record likelihood
-                logPrior(chain,state)=-Prev0.Prior; % record prior;
+                logPosterior(chain,state)=PrevPosterior; % record log posterior
+                logLikelihood(chain,state)=-Prev0.LLH; % record log likelihood
+                logPrior(chain,state)=-log(Prev0.Prior); % record prior
                 logPointwiseLH(chain,:,state)=-Prev0.LPPD; % record pointwise likelihood
             end
             Samples(chain,:,state)=CurrentState; % record sample value
@@ -316,7 +320,7 @@ elseif strcmp(config.Algorithm,'MH') % Metropolis-Hastings
     end
     % set initial values
     if Transform==1
-        start=MCMCConvert_BMW(model.Constraints.start,model.Constraints.ub,model.Constraints.lb,'Probit'); % do transform
+        start=MCMCConvert_BMW(model.Constraints.start,model.Constraints.ub,model.Constraints.lb,config.Transform); % do transform
     else
         start=model.Constraints.start; % use true parameter value (constrain the transition kernel instead)
     end
@@ -358,8 +362,8 @@ elseif strcmp(config.Algorithm,'MH') % Metropolis-Hastings
                 % test proposal state
                 switch Transform
                     case 1
-                        TruePropState=MCMCConvert_BMW(PropState,model.Constraints.ub,model.Constraints.lb,'InverseProbit');
-                        TruePrevState=MCMCConvert_BMW(PrevState,model.Constraints.ub,model.Constraints.lb,'InverseProbit');
+                        TruePropState=MCMCConvert_BMW(PropState,model.Constraints.ub,model.Constraints.lb,['Inverse', config.Transform]);
+                        TruePrevState=MCMCConvert_BMW(PrevState,model.Constraints.ub,model.Constraints.lb,['Inverse', config.Transform]);
                     case 0
                         TruePropState=PropState;
                         TruePrevState=PrevState;
@@ -423,8 +427,8 @@ elseif strcmp(config.Algorithm,'MH') % Metropolis-Hastings
             PropState=mvnrnd(PrevState,cov); % sample from multivariate normal distribution
             switch Transform
                 case 1
-                    TruePropState=MCMCConvert_BMW(PropState,model.Constraints.ub,model.Constraints.lb,'InverseProbit');
-                    TruePrevState=MCMCConvert_BMW(PrevState,model.Constraints.ub,model.Constraints.lb,'InverseProbit');
+                    TruePropState=MCMCConvert_BMW(PropState,model.Constraints.ub,model.Constraints.lb,['Inverse', config.Transform]);
+                    TruePrevState=MCMCConvert_BMW(PrevState,model.Constraints.ub,model.Constraints.lb,['Inverse', config.Transform]);
                 case 0
                     TruePropState=PropState;
                     TruePrevState=PrevState(chain,:);
@@ -448,7 +452,7 @@ elseif strcmp(config.Algorithm,'MH') % Metropolis-Hastings
                 if Transform==1, TrueCurrentState=TruePrevState; end
                 logPosterior(chain,state)=PrevPosterior; % record logPosterior
                 logLikelihood(chain,state)=-Prev0.LLH; % record likelihood
-                logPrior(chain,state)=-Prev0.Prior; % record prior;
+                logPrior(chain,state)=-log(Prev0.Prior); % record prior;
                 logPointwiseLH(chain,:,state)=-Prev0.LPPD; % record pointwise likelihood
             end
             Samples(chain,:,state)=CurrentState; % record sample value
@@ -492,7 +496,7 @@ Summary.FitParam=RawSampling.Samples(IndMAXposterior,:); % best parameter(s)
 if ~strcmp(config.Verbosity,'off')
     fprintf('\nAll done!\n\n')
 end
-save('RawSampling','RawSampling')
+
 end
 
 

@@ -1,8 +1,8 @@
-%% Categorical Slots-plus-Averaging (Between-Variant)
+%% Categorical Standard Mixture (Between-Variant)
 %
-% Define the Categorical Slots-plus-Averaging (Between-Variant) model
+% Define the Categorical Standard Mixture (Between-Variant) model
 % ------------
-% Output=Categorical_Slots_plus_Averaging_BV(param, Data, Input)
+% Output=Categorical_Standard_Mixture_BV(param, Data, Input)
 %
 % ## Theory ##
 % This model assumed that the responses were supported by both categorical
@@ -66,15 +66,18 @@
 %
 
 
-function Output=Categorical_Slots_plus_Averaging_BV(param, Data, Input)
+function Output=Categorical_Standard_Mixture_BV(param, Data, Input)
 
 % Specify parameters
 K=param(1); % Capacity
-kappa_1=param(2); % Unit precision
-kappa_r=param(3); % Response variability
-kappa_c=param(4); % Precision of categorical memory
-p_c=param(5); % Weight of categorical memory
-Nparam=5;
+SS=Data.SS;
+SS_range=unique(SS);
+kappa_SS=param(2:1+length(SS_range)); % Precision of continuous memory
+Nparam=length(SS_range)+1;
+kappa_r=param(Nparam+1);
+kappa_c=param(Nparam+2); % Precision of categorical memory
+p_c=param(Nparam+3); % Weight of categorical memory
+Nparam=Nparam+3;
 if ~isfield(Input,'Variants') % No Variants
     Input.Variants={};
 end
@@ -84,12 +87,6 @@ else
     Nparam=Nparam+1;
     bias=param(Nparam); % Mean bias
 end
-% if Input.Variants.BiasF==1
-%     warning('biasF is not identified in the categorical models.')
-% end
-% if Input.Variants.PrecF==1
-%     warning('precF is not identified in the categorical models.')
-% end
 if ~any(strcmp(Input.Variants,'Swap'))
     s=0; % No swap
 else
@@ -127,22 +124,16 @@ if ~strcmp(Input.Output,'Prior')
         for i_error=1:length(errors)
             N=SS(i_error);
             error0=errors(i_error)+bias;
+            i_N=SS_range==N;
+            conv_SS=sqrt((kappa_SS).^2+(kappa_r)^2+2*kappa_SS*kappa_r.*cosd(error0));
             conv_1_c=sqrt((kappa_c).^2+(kappa_r)^2+2*kappa_c*kappa_r.*cosd(error0));
-            p_low=1-mod(K,N)/N;
-            p_high=mod(K,N)/N;
-            kappa_high=kappa_1*(floor(K/N)+1);
-            kappa_low=kappa_1*floor(K/N);
             if K<N % Beyond capacity
-                conv_1=sqrt((kappa_1).^2+(kappa_r)^2+2*kappa_1*kappa_r.*cosd(error0));
                 p_error(i_error)=(1-K/N)*1/(error_range(2)-error_range(1))+...
-                    (K/N)*((1-p_c)*(besseli0_fast(conv_1)./(2*pi*besseli0_fast(kappa_1)*besseli0_fast(kappa_r)))+...
+                    (K/N)*(besseli0_fast(conv_SS(i_N))./(2*pi*besseli0_fast(kappa_SS(i_N))*besseli0_fast(kappa_r))+...
                     p_c*(besseli0_fast(conv_1_c)./(2*pi*besseli0_fast(kappa_c)*besseli0_fast(kappa_r))));
             else
-                conv_low=sqrt((kappa_low).^2+(kappa_r)^2+2*kappa_low*kappa_r.*cosd(error0));
-                conv_high=sqrt((kappa_high).^2+(kappa_r)^2+2*kappa_high*kappa_r.*cosd(error0));
-                p_error(i_error)=(1-p_c)*(p_low*(besseli0_fast(conv_low)./(2*pi*besseli0_fast(kappa_low)*besseli0_fast(kappa_r)))+...
-                    p_high*(besseli0_fast(conv_high)./(2*pi*besseli0_fast(kappa_high)*besseli0_fast(kappa_r))))+...
-                    p_c*besseli0_fast(conv_1_c)./(2*pi*besseli0_fast(kappa_c)*besseli0_fast(kappa_r));
+                p_error(i_error)=(1-p_c)*(besseli0_fast(conv_SS(i_N))./(2*pi*besseli0_fast(kappa_SS(i_N))*besseli0_fast(kappa_r)))+...
+                    p_c*(besseli0_fast(conv_1_c)./(2*pi*besseli0_fast(kappa_c)*besseli0_fast(kappa_r)));
             end
             if any(strcmp(Input.Variants,'Swap'))
                 if N==1
@@ -153,16 +144,13 @@ if ~strcmp(Input.Output,'Prior')
                         error0_nt=errors_nt(i_nt, i_error)+bias; % Errors with bias
                         error0_nt_c=errors_nt_c(i_nt, i_error);
                         conv_1_c_nt=sqrt((kappa_c).^2+(kappa_r)^2+2*kappa_c*kappa_r.*cosd(error0_nt_c));
+                        conv_SS_nt=sqrt((kappa_SS).^2+(kappa_r)^2+2*kappa_SS*kappa_r.*cosd(error0_nt));
                         if K<N % beyond capacity
-                            conv_1=sqrt((kappa_1).^2+(kappa_r)^2+2*kappa_1*kappa_r.*cosd(error0_nt));
                             p_temp_NT=p_temp_NT+(1-K/N)*1/(error_range(2)-error_range(1)+...
-                                (K/N)*((1-p_c)*(besseli0_fast(conv_1)./(2*pi*besseli0_fast(kappa_1)*besseli0_fast(kappa_r))))+...
+                                (K/N)*((1-p_c)*(besseli0_fast(conv_SS_nt(i_N))./(2*pi*besseli0_fast(kappa_SS(i_N))*besseli0_fast(kappa_r))))+...
                                 p_c*(besseli0_fast(conv_1_c_nt)./(2*pi*besseli0_fast(kappa_c)*besseli0_fast(kappa_r))));
                         else % within capacity
-                            conv_low=sqrt((kappa_low).^2+(kappa_r)^2+2*kappa_low*kappa_r.*cosd(error0_nt));
-                            conv_high=sqrt((kappa_high).^2+(kappa_r)^2+2*kappa_high*kappa_r.*cosd(error0_nt));
-                            p_temp_NT=p_temp_NT+(1-p_c)*(p_low*(besseli0_fast(conv_low)./(2*pi*besseli0_fast(kappa_low)*besseli0_fast(kappa_r)))+...
-                                p_high*(besseli0_fast(conv_high)./(2*pi*besseli0_fast(kappa_high)*besseli0_fast(kappa_r))))+...
+                            p_temp_NT=p_temp_NT+(1-p_c)*(besseli0_fast(conv_SS_nt(i_N))./(2*pi*besseli0_fast(kappa_SS(i_N))*besseli0_fast(kappa_r)))+...
                                 p_c*(besseli0_fast(conv_1_c_nt)./(2*pi*besseli0_fast(kappa_c)*besseli0_fast(kappa_r)));
                         end
                     end
@@ -181,27 +169,20 @@ if ~strcmp(Input.Output,'Prior')
             if K<N % Beyond capacity
                 for i_error=1:length(error_range)
                     error0=error_range(i_error)+bias;
-                    conv_1=sqrt((kappa_1).^2+(kappa_r)^2+2*kappa_1*kappa_r.*cosd(error0));
+                    conv_SS=sqrt((kappa_SS).^2+(kappa_r)^2+2*kappa_SS*kappa_r.*cosd(error0));
                     conv_1_c=sqrt((kappa_c).^2+(kappa_r)^2+2*kappa_c*kappa_r.*cosd(error0));
                     p_error(i_N,i_error)=(1-K/N)*1/length(error_range)+...
-                        (K/N)*(besseli0_fast(conv_1)./(2*pi*besseli0_fast(kappa_1)*besseli0_fast(kappa_r)));
+                        (K/N)*(besseli0_fast(conv_SS(i_N))./(2*pi*besseli0_fast(kappa_SS(i_N))*besseli0_fast(kappa_r)));
                     p_error_c(i_N,i_error)=(1-K/N)*1/length(error_range)+...
                         (K/N)*(besseli0_fast(conv_1_c)./(2*pi*besseli0_fast(kappa_c)*besseli0_fast(kappa_r)));
                 end
                 p_error(i_N,:)=p_error(i_N,:,1)/sum(p_error(i_N,:,1));
                 p_error_c(i_N,:)=p_error_c(i_N,:,1)/sum(p_error_c(i_N,:,1));
             else
-                p_low=1-mod(K,N)/N;
-                p_high=mod(K,N)/N;
-                kappa_low=kappa_1*(floor(K/N)+1);
-                kappa_high=kappa_1*floor(K/N);
+                conv_SS=sqrt((kappa_SS).^2+(kappa_r)^2+2*kappa_SS*kappa_r.*cosd(error0));
                 for i_error=1:length(error_range)
                     error0=error_range(i_error)+bias;
-                    conv_1_c=sqrt((kappa_c).^2+(kappa_r)^2+2*kappa_c*kappa_r.*cosd(error0));
-                    conv_low=sqrt((kappa_low).^2+(kappa_r)^2+2*kappa_low*kappa_r.*cosd(error0));
-                    conv_high=sqrt((kappa_high).^2+(kappa_r)^2+2*kappa_high*kappa_r.*cosd(error0));
-                    p_error(i_N,i_error)=p_low*(besseli0_fast(conv_low)./(2*pi*besseli0_fast(kappa_low)*besseli0_fast(kappa_r)))+...
-                        p_high*(besseli0_fast(conv_high)./(2*pi*besseli0_fast(kappa_high)*besseli0_fast(kappa_r)));
+                    p_error(i_N,i_error)=besseli0_fast(conv_SS(i_N))./(2*pi*besseli0_fast(kappa_SS(i_N))*besseli0_fast(kappa_r));
                     p_error_c(i_N,i_error)=besseli0_fast(conv_1_c)./(2*pi*besseli0_fast(kappa_c)*besseli0_fast(kappa_r));
                 end
                 p_error(i_N,:)=p_error(i_N,:)/sum(p_error(i_N,:));
@@ -277,19 +258,20 @@ function p=prior(param, Input)
 K=param(1); % Capacity
 % weibull prior for capacity
 p0(1)=wblpdf(K,3.5,3); % given that K is ofter 3~4
-kappa_1=param(2); % Unit resource
-% Gamma prior for unit resource
-p0(2)=gampdf(kappa_1,3,5);
-kappa_r=param(3); % Response variability
+kappa_SS=param(2:1+Nkappa); % precision
+% Gamma prior for precision
+p0(2:1+Nkappa)=gampdf(kappa_SS,3,10);
+Nparam=Nkappa+1;
+kappa_r=param(Nparam+1); % Response variability
 % Gamma prior for response noise
 p0(3)=gampdf(kappa_r,3,5);
-kappa_c=param(4); % categorical memory precision
+kappa_c=param(Nparam+2); % categorical memory precision
 % Gamma prior for categorical memory precision
 p0(4)=gampdf(kappa_c,3,5);
-p_c=param(5); % categorical weight
+p_c=param(Nparam+3); % categorical weight
 % Gaussian prior for the rate of categorical memory
 p0(5)=normpdf(p_c, 0.5, 1);
-Nparam=5;
+Nparam=Nparam+3;
 if ~isfield(Input,'Variants') % No Variants
     Input.Variants={};
 end

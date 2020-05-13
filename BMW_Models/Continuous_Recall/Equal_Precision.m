@@ -22,12 +22,10 @@
 %
 % - Input
 % Input.Variant
-%   options of model variants
-%       Input.Variants.Bias, 0/1 to decide whether consider representational
-%       shift/response bias
-%       Input.Variants.Swap, 0/1 to decide whether use swap variants
-%       Input.Variants.BiasF, 0/1 to decide whether consider a cosine-shaped
-%       fluctuation of representational shift/response bias
+%   cell array, options of model variants
+%       'Bias', whether consider representational shift/response bias
+%       'Swap', whether use swap variants
+%       'BiasF', whether consider a cosine-shaped fluctuation of representational shift/response bias
 % Input.Output
 %   string, choose output mode
 %       'Prior', only output prior density
@@ -77,30 +75,27 @@ end
 Nparam=Nparam+1;
 kappa_r=param(3); % Response variability
 if ~isfield(Input,'Variants') % No Variants
-    Input.Variants.Bias=0;
-    Input.Variants.Swap=0;
-    Input.Variants.BiasF=0;
-    Input.Variants.PrecF=0;
+    Input.Variants={};
 end
-if Input.Variants.Bias==0
+if ~any(strcmp(Input.Variants,'Bias'))
     bias=0; % Responses concentrate on samples
 else
     Nparam=Nparam+1;
     bias=param(Nparam); % Mean bias
 end
-if Input.Variants.BiasF==0
+if ~any(strcmp(Input.Variants,'BiasF'))
     biasF=0; % Set bias as a consistent value
 else
     Nparam=Nparam+1;
     biasF=param(Nparam); % Fluctuation of bias
 end
-if Input.Variants.PrecF==0
+if ~any(strcmp(Input.Variants,'PrecF'))
     precF=0; % Set precision as consistent within each set size
 else
     Nparam=Nparam+1;
     precF=param(Nparam); % Fluctuation of precision
 end
-if Input.Variants.Swap==0
+if ~any(strcmp(Input.Variants,'Swap'))
     s=0; % No swap
 else
     Nparam=Nparam+1;
@@ -115,16 +110,16 @@ if length(error_range)==2
 else
     continuous=0;
 end
-if Input.Variants.BiasF==1 || Input.Variants.PrecF==1
+if any(strcmp(Input.Variants,'BiasF')) || any(strcmp(Input.Variants,'PrecF'))
     sample_range=Data.sample_range;
     samples=Data.sample;
 else
     samples=ones(1,length(errors));
     sample_range=1;
 end
-if Input.Variants.Swap==1
+if any(strcmp(Input.Variants,'Swap'))
     errors_nt=Data.error_nt;
-    if Input.Variants.BiasF==1 || Input.Variants.PrecF==1
+    if any(strcmp(Input.Variants,'BiasF')) || any(strcmp(Input.Variants,'PrecF'))
         samples_nt=Data.sample_nt;
     end
 end
@@ -149,7 +144,7 @@ if ~strcmp(Input.Output,'Prior')
             % Convolute motor noise
             conv_kappa=sqrt(kappa.^2+kappa_r^2+2*kappa*kappa_r.*cosd(error0));
             p_error(i_error)=besseli0_fast(conv_kappa)./(2*pi*besseli0_fast(kappa)*besseli0_fast(kappa_r));
-            if Input.Variants.Swap==1
+            if any(strcmp(Input.Variants,'Swap'))
                 if N==1
                     p_error_NT(i_error)=0;
                 else
@@ -194,19 +189,19 @@ if ~strcmp(Input.Output,'Prior')
         p_T=zeros(1,length(errors));
         p_NT=zeros(1,length(errors));
         for i=1:length(errors)
-            if Input.Variants.BiasF==1 || Input.Variants.PrecF==1
+            if any(strcmp(Input.Variants,'BiasF')) || any(strcmp(Input.Variants,'PrecF'))
                 p_T(i)=(1-s)*p_error(SS_range==SS(i),error_range==errors(i), sample_range==samples(i));
             else
                 p_T(i)=(1-s)*p_error(SS_range==SS(i),error_range==errors(i), 1);
             end
         end
-        if Input.Variants.Swap==1
+        if any(strcmp(Input.Variants,'Swap'))
             for i=1:length(errors_nt)
                 if SS(i)==1
                     p_NT(i)=0;
                 else
                     for j=1:SS(i)-1
-                        if Input.Variants.BiasF==1 || Input.Variants.PrecF==1
+                        if any(strcmp(Input.Variants,'BiasF')) || any(strcmp(Input.Variants,'PrecF'))
                             p_NT(i)=p_NT(i)+s/(SS(i)-1)*p_error(SS_range==SS(i),error_range==errors_nt(j,i), sample_range==samples_nt(j,i));
                         else
                             p_NT(i)=p_NT(i)+s/(SS(i)-1)*p_error(SS_range==SS(i),error_range==errors_nt(j,i), 1);
@@ -220,9 +215,11 @@ if ~strcmp(Input.Output,'Prior')
     
     % LLH
     if isfield(Input,'PDF') && Input.PDF==1
-        LLH.error=p_error; % PDF
+        LLH=p_error; % PDF
     else
         LLH=-sum(log(p_LH)); % Negative LLH
+        isinf(p_LH)
+        any(isinf(p_LH))
     end
     
     % Posterior
@@ -238,7 +235,7 @@ elseif strcmp(Input.Output,'LLH')
 elseif strcmp(Input.Output,'Prior')
     Output=Prior;
 elseif strcmp(Input.Output,'LPPD')
-    Output=log(LH);
+    Output=log(p_LH);
 elseif strcmp(Input.Output,'All')
     Output.LP=LP;
     Output.LLH=LLH;
@@ -246,7 +243,7 @@ elseif strcmp(Input.Output,'All')
     Output.LPPD=log(p_LH);
 end
 
-if ~isstruct(Output) || any(abs(Output))==Inf || any(isnan(Output))
+if ~isstruct(Output) && (any(isinf(abs(Output))) || any(isnan(Output)))
     Output=realmax('double'); % Output should be a real value
 end
 
@@ -273,29 +270,27 @@ kappa_r=param(Nparam); % Response variability
 % Gamma prior for response noise
 p0(Nparam)=gampdf(kappa_r,3,5);
 if ~isfield(Input,'Variants') % No Variants
-    Input.Variants.Bias=0;
-    Input.Variants.Swap=0;
-    Input.Variants.BiasF=0;
-    Input.Variants.PrecF=0;
+    Input.Variants={};
 end
-if Input.Variants.Bias==1
+if any(strcmp(Input.Variants,'Bias'))
+    Nparam=Nparam+1;
     bias=param(Nparam); % Mean bias
     % Gaussian prior for bias
     p0(Nparam)=normpdf(bias, 0, 1);
 end
-if Input.Variants.BiasF==1
+if any(strcmp(Input.Variants,'BiasF'))
     Nparam=Nparam+1;
     biasF=param(Nparam); % Fluctuation of bias
     % Gaussian prior for the fluctuation of bias
     p0(Nparam)=normpdf(biasF, 0, 5);
 end
-if Input.Variants.PrecF==1
+if any(strcmp(Input.Variants,'PrecF'))
     Nparam=Nparam+1;
     precF=param(Nparam); % Fluctuation of precision
     % Gaussian prior for the fluctuation of precision
     p0(Nparam)=normpdf(precF, 0, 1);
 end
-if Input.Variants.Swap==1
+if any(strcmp(Input.Variants,'Swap'))
     Nparam=Nparam+1;
     s=param(Nparam); % Swap rate
     % Gaussian prior for the swap rate

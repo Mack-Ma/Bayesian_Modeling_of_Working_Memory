@@ -18,14 +18,13 @@
 %% Prologue
 close all
 clear variables
-% % Load toolbox
-% addpath('Your BMW Toolbox Path')
-% BMW('Silent'); % Add subfolders
+% load toolbox
+BMW('AddPath');
 % Designate models based on which to simulate
-SimModelSpace={'Item Limit', 'Standard Mixture', 'Slots-plus-Averaging', 'Equal Precision'}; % Full model space
+SimModelSpace={'Standard Mixture', 'Slots-plus-Averaging'}; 
 Nsim=length(SimModelSpace);
 % Designate models to fit
-FitModelSpace={'Item Limit', 'Standard Mixture', 'Slots-plus-Averaging', 'Equal Precision'}; % Full model space
+FitModelSpace={'Standard Mixture', 'Slots-plus-Averaging'}; 
 Nfit=length(FitModelSpace);
 % Configuration
 Nset=10; % # of datasets per model
@@ -39,12 +38,12 @@ for sim_ind=1:Nsim
     % Configurations
     SS_range=[1 2 4 6];
     Data.error_range=-89:1:90; % Axial Data
-    Data.error=0;
-    Data.SS=reshape(repmat(SS_range,ceil(Ntrial/length(SS_range)),1),[Ntrial,1]);
-    Input.PDF=1; % Switch on pdf mode (instead of likelihood mode)
+    Data.error=repmat(Data.error_range,1,length(SS_range));
+    Data.SS=reshape(repmat(SS_range,length(Data.error_range),1),[length(SS_range)*length(Data.error_range),1]);
+    Input.Output='LPPD'; % use log pointwise likelihood
     FunctionName=MN_Convert_BMW(SimModelSpace{sim_ind}); % Convert model names to function names
     ModelStruct.Model=SimModelSpace{sim_ind};
-    % ModelStruct.Swap=1; % Set model variants
+    % ModelStruct.Variants={'Swap'}; % Set model variants
     SimInfo=Info_BMW(ModelStruct,Data); % Get default settings
     SimParam=SimInfo.start;
     % Generate data
@@ -52,12 +51,12 @@ for sim_ind=1:Nsim
         data_temp.error=zeros(Ntrial,1);
         % Generate pdf
         eval(['PDF=',FunctionName,'(SimParam,Data,Input);']) % SS-by-error
-        freq_temp=0*PDF.error;
-        for i=1:size(freq_temp,3)
-            freq_temp(:,:,i)=mnrnd(ceil(Ntrial/length(SS_range)),PDF.error); % Sampling based on the multinominal distribution
-        end
+        PDF=exp(PDF);
+        PDF=reshape(PDF,[length(Data.error_range),length(SS_range)])';
+        PDF=PDF./repmat(sum(PDF,2),1,size(PDF,2)); % to ensure that PDF is a valid prob. density function
+        freq_temp=mnrnd(ceil(Ntrial/length(SS_range)),PDF); % Sampling based on the multinominal distribution
         % Construct data based on the frequency
-        data_temp.SS=Data.SS;
+        data_temp.SS=reshape(repmat(SS_range,ceil(Ntrial/length(SS_range)),1),[Ntrial,1]);
         data_temp.error_range=Data.error_range;
         for ss=1:length(SS_range)
             error_temp=zeros(ceil(Ntrial/length(SS_range)),1);
@@ -70,7 +69,7 @@ for sim_ind=1:Nsim
             end
             data_temp.error(1+(ss-1)*ceil(Ntrial/length(SS_range)):ss*ceil(Ntrial/length(SS_range)))=error_temp;
         end
-        fprintf('\nmodel: %s, dataset: %d\n',SimModelSpace{sim_ind},set) % Progress
+        fprintf('\nModel: %s, Dataset: %d\n',SimModelSpace{sim_ind},set) % Progress
         Dataset{sim_ind,set}=data_temp;
         SimParamRec{sim_ind,set}=SimParam;
     end
@@ -86,25 +85,10 @@ for sim_ind=1:Nsim
         % Specify model
         Config_MA.Model.Model=FitModelSpace{fit_ind};
         % Set Variants (Optional)
-        Config_MA.Model.Variants.Swap=0; % Swap rate
-        Config_MA.Model.Variants.PrecF=0; % Fluctuation of precision
-        Config_MA.Model.Variants.BiasF=0; % Fluctuation of bias
-        Config_MA.Model.Variants.Bias=0; % Bias
+%         Config_MA.Model.Variants={'Bias'};
         % Model definition
-        MA=ModelDefinition_BMW(Config_MA);
-        Config_MA.Criteria.LLH=1; % Assign 1 to calculate log likelihood
-        Config_MA.Criteria.AIC=1; % Assign 1 to calculate AIC
-        Config_MA.Criteria.AICc=1; % Assign 1 to calculate AICc
-        Config_MA.Criteria.BIC=1; % Assign 1 to calculate BIC
-        Config_MA.Criteria.DIC=0; % Assign 1 to calculate DIC
-        Config_MA.Criteria.WAIC=0; % Assign 1 to calculate WAIC
-        Config_MA.Criteria.LME=0; % % Assign 1 to calculate log marginal likelihood
-        Config_MA.Constraints.Default=1;
-        Config_MA.FitOptions.Default=1;
+        Config_MA.Criteria={'DIC1','DIC2','DIC*','WAIC1','WAIC2','LME_GHM','LME_BS'};
         %     Config_MA.FitOptions.Algorithm='SA'; % Change optimization algorithm (Default: 'GA')
-        %     Config_MA.FitOptions.MaxIter=5000; % Change the max # of iteration (Default: 3000)
-        %     Config_MA.FitOptions.Display='off'; % Change the display mode (Default: 'iter')
-        Config_MA.InputFile=MA;
         % Configuration
         MA=Configuration_BMW(Config_MA);
         % Estimation
@@ -114,11 +98,9 @@ for sim_ind=1:Nsim
 end
 
 %% Model Comparison
-CompareResult=cell(Nsim,Nset);
-Config_MC.Criterion='BIC';
+CompareResult=cell(Nsim,Nfit);
 for sim_ind=1:Nsim
-    Config_MC.MS=FitResult(:,sim_ind); % Define model space
-    CompareResult(sim_ind,:)=ModelComparison_BMW(Config_MC);
+    CompareResult(sim_ind,:)=ModelComparison_BMW(FitResult(:,sim_ind));
 end
 
 %% Epilogue

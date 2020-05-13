@@ -55,9 +55,9 @@
 % Memory, Attention & Cognition (MAC) Lab,
 % 3/22/2020
 %
-% Bug reports or any other feedbacks please contact M.T. (BMW_ma2018@outlook.com)
+% Bug reports or any other feedbacks please contact M.T. (mack_ma2018@outlook.com)
 % BMW toolbox:
-% https://github.com/BMW-Ma/Bayesian_Modeling_of_Working_Memory
+% https://github.com/Mack-Ma/Bayesian_Modeling_of_Working_Memory
 %
 
 function IC=BMW_GetIC_MCMC(RawSampling, Model, Data, Method)
@@ -75,9 +75,12 @@ end
 if nargin==3 || ~isfield(Method, 'Verbosity')
     Method.Verbosity=0;
 end
+if nargin==3 || ~isfield(Method, 'Transform')
+    Method.Transform='Probit';
+end
 % get IC
 switch Method.IC
-    case 'DIC' % get deviance information criterion
+    case 'DIC1' % get deviance information criterion
         if Method.Verbosity==1;
             fprintf('\nNow start estimating DIC... \n\n')
         end
@@ -90,8 +93,23 @@ switch Method.IC
         eval(['DevM=2*',Model.Model,'(MeanSample,Data,Model);'])
         % get 'effective number of parameters'
         pD=MDev-DevM;
-        % DIC
+        % DIC1
         IC=MDev+pD;
+        if Method.Verbosity==1;
+            fprintf('Done!\n')
+        end
+    case 'DIC2' % get deviance information criterion
+        if Method.Verbosity==1;
+            fprintf('\nNow start estimating DIC... \n\n')
+        end
+        % get likelihood
+        LLH=-Likelihood;
+        % get posterior mean deviance (expected log likelihood)
+        MDev=mean(2*LLH);
+        % get variance
+        pV=0.5*var(2*LLH);
+        % DIC2
+        IC=MDev+pV;
         if Method.Verbosity==1;
             fprintf('Done!\n')
         end
@@ -121,9 +139,9 @@ switch Method.IC
         lppd=-LPPD;
         elppd=-2*sum(log(mean(exp(lppd),1)));
         % get penalty
-        p_waic1=2*sum(log(mean(exp(lppd),1)))-2*sum(mean(lppd,1));
+        p_waic1=-2*sum(log(mean(exp(lppd),1)))+2*sum(mean(lppd,1));
         % WAIC
-        IC=elppd-p_waic1;
+        IC=elppd+p_waic1;
         if Method.Verbosity==1;
             fprintf('Done!\n')
         end
@@ -135,9 +153,9 @@ switch Method.IC
         lppd=-LPPD;
         elppd=-2*sum(log(mean(exp(lppd),1)));
         % get penalty
-        p_waic2=0.5*sum(var(lppd,1));
+        p_waic2=sum(var(lppd,1));
         % WAIC
-        IC=elppd-p_waic2;
+        IC=elppd+p_waic2;
         if Method.Verbosity==1;
             fprintf('Done!\n')
         end
@@ -145,74 +163,117 @@ switch Method.IC
         if Method.Verbosity==1;
             fprintf('\nNow estimate marginal likelihood based on the generalized harmonic mean estimator... \n\n')
         end
-        % I hate the dogmaticity that the importance density brought in.
-        % Nonetheless, it's definitely faster than bridge sampling.
-        % use the ML estimator to find the fittest proposal distribution
-        % get the covariance matrix of the raw posterior samples
+        % Default method (given its convenience).
+        % We'll canonically use the multivariate gaussian distribution as the
+        % importance density (proposal distribution) and use the kurtosis 
+        % to scale the proposal distribution to make sure that it has
+        % fatter tails than the true distribution.
+        
         SampleCov=cov(RawSamples);
+        SampleSD=std(RawSamples);
         IDMean=mean(RawSamples);
-        IDCov=SampleCov*(Nsample-1)/Nsample; % Unbiased estimator
-        % get log importance density
-        LP=Posterior;
-        LID=zeros(Nsample,1);
-        for i=1:Nsample
-            LID(i)=log(mvnpdf(RawSamples(i,:),IDMean,IDCov)); % we use multivariate normal distribution
-        end
-        % scaling
-        LID=LID*(max(LP)/max(LID));
-        % ID/posterior
-        DR=exp(LID-LP);
-        % test bounds (due to the computational limit)
-        DR(DR==Inf)=realmax('double')/Nsample;
-        DR(DR==-Inf)=realmin('double')*Nsample;
-        % harmonic mean estimator
-        IC=-log((mean(DR)));
-        if Method.Verbosity==1
-            fprintf('Done!\n')
-        end
+        IDCov0=SampleCov*(Nsample-1)/Nsample; % Unbiased estimator
+        IDCov=IDCov0+0.00001*mean(mean(IDCov0))*eye(Nparam); % To avoid the singularity problem
+%         % skewness
+%         SampleMoment3rd=mean((RawSamples-repmat(mean(RawSamples),Nsample,1)).^3); % 3rd moment
+%         SampleSkewness=SampleMoment3rd./(SampleSD.^3); % standardize
+        % kurtosis
+        SampleMoment4th=mean((RawSamples-repmat(mean(RawSamples),Nsample,1)).^4); % 4th moment
+        SampleKurtosis=SampleMoment4th./(SampleSD.^4); % standardize
+%         if any(abs(SampleSkewness-1)>2)
+            % get log importance density
+            LP=Posterior;
+            LID=zeros(Nsample,1);
+            for i=1:Nsample
+                LID(i)=log(mvnpdf(RawSamples(i,:),IDMean,IDCov)); % we use multivariate normal distribution
+            end
+            % scaling
+            LID=LID+log((mean(SampleKurtosis)/4).^0.25);
+            % ID/posterior
+            DR=LID-LP;
+            mDR=median(DR); 
+            if mDR>=log(realmax('double'))
+                DR=DR-mDR; % Avoid reaching computational limit
+            end
+            DR=exp(DR);
+            % test bounds (due to the computational limit)
+            DR(DR==Inf)=realmax('double')/Nsample;
+            DR(DR==-Inf)=realmin('double');
+            % the generalized harmonic mean estimator
+            IC=-(-log((mean(DR)))+mDR);
+            if Method.Verbosity==1
+                fprintf('Done!\n')
+            end
+
     case 'LME_BridgeSampling' % get log model evidence (marginal likelihood) through bridge sampling
         if Method.Verbosity==1;
             fprintf('\nNow estimate marginal likelihood based on bridge sampling... \n\n')
         end
         % recommended method, takes time tho
-        % hate the dogmaticity as well....
         % use ML estimator to fit the proposal distribution (mvn)
         if Method.Verbosity==1;
             fprintf('Constructing the proposal function... \n')
         end
         % get the covariance matrix of the raw posterior samples
         SampleCov=cov(RawSamples);
+        IDMean=mean(RawSamples);
         IDCov=SampleCov*(Nsample-1)/Nsample; % Unbiased estimator
+        IDCov=IDCov+0.00001*mean(mean(IDCov))*eye(Nparam); % To avoid the singularity problem
         % Sampling based on the proposal distribution
         Nprop=Nsample/2;
-        [PropSamples,PropID]=randmvn(Nprop,zeros(1,Nparam),IDCov);
+        [PropSamples,PropID]=randmvn(Nprop,IDMean,IDCov);
         if Method.Verbosity==1;
             fprintf('Done!\n')
             fprintf('Now start updating the estimated marginal likelihood value... \n')
         end
         % get log posterior of the proposal samples
         % do transform
-        TruePropSamples=MCMCConvert_BMW(PropSamples,Model.Constraints.ub,Model.Constraints.lb,'InverseProbit');
+        TruePropSamples=MCMCConvert_BMW(PropSamples,Model.Constraints.ub,Model.Constraints.lb,['Inverse',Method.Transform]);
         LPprop=zeros(Nprop,1);
         Model.Output='LP';
+        if Method.Verbosity==1
+            fprintf('\nBridge Sampling\n')
+        end
+        if Method.Verbosity==1
+            fprintf('\nNow start calculating posteriors for the proposal samples...\n')
+        end
         for i=1:Nprop
             eval(['LPprop(i)=-',Model.Model,'(TruePropSamples(i,:), Data, Model);'])
+            if mod(i,Nprop/10)==rem(Nprop,10) && i/(Nprop/10)>=1
+                fprintf('|||||')
+            end
         end
+        fprintf('\nDone!\n')
         % get proposal density of the target samples
-        TarID=mvnpdf(RawSamples,[],IDCov);
+        TarID=mvnpdf(RawSamples,IDMean,IDCov);
+        for i=1:length(RawSamples)
+            A=MCMCConvert_BMW(RawSamples(i,:),Model.Constraints.ub,Model.Constraints.lb,['Inverse',Method.Transform]);
+            if A(1)>6
+                RawSamples(i,1)=MCMCConvert_BMW(6,Model.Constraints.ub(1),Model.Constraints.lb(2),[Method.Transform]);
+            end
+        end
         % get L1 & L2
         LL1=Posterior-log(TarID);
         LL2=LPprop-log(PropID);
         LLstar=median(LL1); % avoid reaching the computational limit, see https://osf.io/8x7m9/
         % use the optimal bridging function in Gronau et al, 2017
-        MaxT=10000;
+        MaxT=1e8;
         ToleranceME=1e-10;
-        ME0=0; % initial guess
+        ME0=1e-6; % initial guess
         s1=Nsample/(Nsample+Nprop);
         s2=Nprop/(Nsample+Nprop);
+        if Method.Verbosity==1
+            fprintf('\nNow start iterations...\n')
+        end
         for t=1:MaxT
-            ME1=sum(exp(LL2-LLstar)./(s1*exp(LL2-LLstar)+s2*ME0));
-            ME2=sum(1./(s1*exp(LL1-LLstar)+s2*ME0));
+            ME1=exp(LL2-LLstar)./(s1*exp(LL2-LLstar)+s2*ME0);
+            ME1=ME1(~isnan(ME1));
+            ME1=ME1(~isinf(ME1));
+            ME1=sum(ME1);
+            ME2=1./(s1*exp(LL1-LLstar)+s2*ME0);
+            ME2=ME2(~isnan(ME2));
+            ME2=ME2(~isinf(ME2));
+            ME2=sum(ME2);
             if ME2==Inf
                 ME=realmin('double');
             else
@@ -221,14 +282,24 @@ switch Method.IC
             % check tolerance
             if abs(1-ME0/ME)<=ToleranceME
                 MEfinal=ME;
-                fprintf('Converged!\n')
+                if Method.Verbosity==1
+                    fprintf('\nConverged!\n')
+                end
                 break;
+            end
+            if Method.Verbosity==1
+                if rem(t,1e4)==0
+                    T=floor(t/1e4);
+                    fprintf('\n%de5 iterations done. LME difference=%d\n',T,abs(1-ME0/ME))
+                end
             end
             ME0=ME;
         end
         if t==MaxT
-            fprintf('Reach max number of interation, marginal likelihood didn''t converge...\n')
-            MEfinal=ME;
+            if Method.Verbosity==1
+                fprintf('\nReach max number of interation, marginal likelihood didn''t converge...\n')
+            end
+            MEfinal=log(ME0)+LLstar;
         end
         IC=log(MEfinal)+LLstar;
 end

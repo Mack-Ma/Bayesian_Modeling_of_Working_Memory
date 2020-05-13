@@ -18,7 +18,7 @@ if nargin==4 || isempty(FitOptions)
 elseif nargin==3 || isempty(Constraints)
     error('Constraints are needed...')
 elseif nargin==2 || isempty(Model)
-    error('Cannot find likelihood function...')
+    error('Cannot detect the likelihood function...')
 end
 
 if strcmp(FitOptions.Algorithm,'fmincon: sqp')
@@ -30,9 +30,7 @@ if strcmp(FitOptions.Algorithm,'fmincon: sqp')
         end
         if ~isfield(FitOptions,'fminconOptions')
             % Algorithm: 'active-set'/'interior-point'/'sqp'/'sqp-legacy'/'trust-region-reflective'
-            FitOptions.fminconOptions.Display='iter';
-            FitOptions.fminconOptions.MaxIter=5000;
-            FitOptions.fminconOptions.StepTolerance=1e-6;
+            FitOptions.fminconOptions=[];
         end
         FitOptions.fminconOptions.Algorithm='sqp';
         eval(['[Param_BMW, LP_BMW, Exitflag, Output]=fmincon(@(Param)',Model,'(Param, Data, Config), Constraints.start,[],[],[],[],Constraints.lb, Constraints.ub, [], FitOptions.fminconOptions);'])
@@ -46,9 +44,7 @@ elseif strcmp(FitOptions.Algorithm,'fmincon: interior-point')
         end
         if ~isfield(FitOptions,'fminconOptions')
             % Algorithm: 'active-set'/'interior-point'/'sqp'/'sqp-legacy'/'trust-region-reflective'
-            FitOptions.fminconOptions.Display='iter';
-            FitOptions.fminconOptions.MaxIter=3000;
-            FitOptions.fminconOptions.StepTolerance=1e-6;
+            FitOptions.fminconOptions=[];
         end
         FitOptions.fminconOptions.Algorithm='interior-point';
         eval(['[Param_BMW, LP_BMW, Exitflag, Output]=fmincon(@(Param)',Model,'(Param, Data, Config), Constraints.start,[],[],[],[],Constraints.lb, Constraints.ub, [], FitOptions.fminconOptions);'])
@@ -62,9 +58,7 @@ elseif strcmp(FitOptions.Algorithm,'fmincon: active-set')
         end
         if ~isfield(FitOptions,'fminconOptions')
             % Algorithm: 'active-set'/'interior-point'/'sqp'/'sqp-legacy'/'trust-region-reflective'
-            FitOptions.fminconOptions.Display='iter';
-            FitOptions.fminconOptions.MaxIter=3000;
-            FitOptions.fminconOptions.StepTolerance=1e-6;
+            FitOptions.fminconOptions=[];
         end
         FitOptions.fminconOptions.Algorithm='active-set';
         eval(['[Param_BMW, LP_BMW, Exitflag, Output]=fmincon(@(Param)',Model,'(Param, Data, Config), Constraints.start,[],[],[],[],Constraints.lb, Constraints.ub, [], FitOptions.fminconOptions);'])
@@ -76,10 +70,10 @@ elseif strcmp(FitOptions.Algorithm,'BADS')
         if ~exist('bads','file')
             error('Error: BADS toolbox is needed.')
         end
-        if ~isfield(FitOptions,'badsOptions')
-            FitOptions.badsOptions=bads('defaults');
+        if ~isfield(FitOptions,'BADSOptions')
+            FitOptions.BADSOptions=bads('defaults');
         end
-        eval(['[Param_BMW, LP_BMW, Exitflag, Output] = bads(@(Param)' Model, '(Param, Data, Config), Constraints.start, Constraints.lb, Constraints.ub, Constraints.lb, Constraints.ub, [], FitOptions.badsOptions);'])
+        eval(['[Param_BMW, LP_BMW, Exitflag, Output] = bads(@(Param)' Model, '(Param, Data, Config), Constraints.start, Constraints.lb, Constraints.ub, Constraints.lb, Constraints.ub, [], FitOptions.BADSOptions);'])
         
 elseif strcmp(FitOptions.Algorithm,'MADS')
         %% mads
@@ -89,7 +83,10 @@ elseif strcmp(FitOptions.Algorithm,'MADS')
         if ~exist('patternsearch','file')
             error('Error: Global Optimization toolbox is needed.')
         end
-        eval(['[Param_BMW, LP_BMW, Exitflag, Output] = patternsearch(@(Param)' Model, '(Param, Data, Config), Constraints.start, [], [], [], [], Constraints.lb, Constraints.ub, [], FitOptions.madsOptions);'])
+        if ~isfield(FitOptions,'MADSOptions')
+            FitOptions.MADSOptions=[];
+        end
+        eval(['[Param_BMW, LP_BMW, Exitflag, Output] = patternsearch(@(Param)' Model, '(Param, Data, Config), Constraints.start, [], [], [], [], Constraints.lb, Constraints.ub, [], FitOptions.MADSOptions);'])
                 
 elseif strcmp(FitOptions.Algorithm,'GA')
         %% Genetic Algorithm
@@ -98,7 +95,10 @@ elseif strcmp(FitOptions.Algorithm,'GA')
         if ~exist('ga','file')
             error('Error: Global Optimization toolbox is needed.')
         end
-        eval(['[Param_BMW, LP_BMW, Exitflag, Output] = ga(@(Param)' Model, '(Param, Data, Config), length(Constraints.start), [], [], [], [], Constraints.lb, Constraints.ub, [], FitOptions.gaOptions);'])
+        if ~isfield(FitOptions,'GAOptions')
+            FitOptions.GAOptions=[];
+        end
+        eval(['[Param_BMW, LP_BMW, Exitflag, Output] = ga(@(Param)' Model, '(Param, Data, Config), length(Constraints.start), [], [], [], [], Constraints.lb, Constraints.ub, [], FitOptions.GAOptions);'])
         
 elseif strcmp(FitOptions.Algorithm,'SA')
         %% Simulated Annealing
@@ -107,7 +107,10 @@ elseif strcmp(FitOptions.Algorithm,'SA')
         if ~exist('simulannealbnd','file')
             error('Error: Global Optimization toolbox is needed.')
         end
-        eval(['[Param_BMW, LP_BMW, Exitflag, Output] = simulannealbnd(@(Param)' Model, '(Param, Data, Config), Constraints.start, Constraints.lb, Constraints.ub, FitOptions.saOptions);'])
+        if ~isfield(FitOptions,'SAOptions')
+            FitOptions.SAOptions=[];
+        end
+        eval(['[Param_BMW, LP_BMW, Exitflag, Output] = simulannealbnd(@(Param)' Model, '(Param, Data, Config), Constraints.start, Constraints.lb, Constraints.ub, FitOptions.SAOptions);'])
         
 elseif strcmp(FitOptions.Algorithm,'DE-MCMC')
         %% DE-MCMC
@@ -131,11 +134,11 @@ elseif strcmp(FitOptions.Algorithm,'DE-MCMC')
             end
             Model_MCMC.Constraints.start=start_update;
         end
-        Config_MCMC.Algorithm='DE';
-        if isfield(FitOptions,'MCMCoptions')
-            Config_MCMC=FitOptions.MCMCoptions;
+        if isfield(FitOptions,'MCMCOptions')
+            Config_MCMC=FitOptions.MCMCOptions;
         end
-        [MCMCResult,OptResult]=BMW_MCMC(Model_MCMC, Data, Config_MCMC);
+        Config_MCMC.Algorithm='DE';
+        [MCMCResult,OptResult]=BMW_parMCMC(Model_MCMC, Data, Config_MCMC);
         Param_BMW=OptResult.FitParam;
         LP_BMW=log(OptResult.MAXposterior);
         Quality.MCMCResult=MCMCResult;
@@ -160,11 +163,11 @@ elseif strcmp(FitOptions.Algorithm,'MH-MCMC')
             end
             Model_MCMC.Constraints.start=start_update;
         end
-        Config_MCMC.Algorithm='MH';
-        if isfield(FitOptions,'MCMCoptions')
-            Config_MCMC=FitOptions.MCMCoptions;
+        if isfield(FitOptions,'MCMCOptions')
+            Config_MCMC=FitOptions.MCMCOptions;
         end
-        [MCMCResult,OptResult]=BMW_MCMC(Model_MCMC, Data, Config_MCMC);
+        Config_MCMC.Algorithm='MH';
+        [MCMCResult,OptResult]=BMW_parMCMC(Model_MCMC, Data, Config_MCMC);
         Param_BMW=OptResult.FitParam;
         LP_BMW=log(OptResult.MAXposterior);
         Quality.MCMCResult=MCMCResult;

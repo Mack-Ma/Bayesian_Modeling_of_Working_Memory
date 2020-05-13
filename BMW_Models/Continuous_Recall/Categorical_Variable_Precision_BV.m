@@ -83,10 +83,9 @@ kappa_c=param(Nparam+2); % categorical memory precision
 p_c=param(Nparam+3); % categorical weight
 Nparam=Nparam+3;
 if ~isfield(Input,'Variants') % No Variants
-    Input.Variants.Bias=0;
-    Input.Variants.Swap=0;
+    Input.Variants={};
 end
-if Input.Variants.Bias==0
+if ~any(strcmp(Input.Variants,'Bias'))
     bias=0; % Responses concentrate on samples
 else
     Nparam=Nparam+1;
@@ -98,7 +97,7 @@ end
 % if Input.Variants.PrecF==1
 %     warning('precF is not identified in the categorical models.')
 % end
-if Input.Variants.Swap==0
+if ~any(strcmp(Input.Variants,'Swap'))
     s=0; % No swap
 else
     Nparam=Nparam+1;
@@ -114,7 +113,7 @@ else
     continuous=0;
 end
 errors_c=Data.error_c;
-if Input.Variants.Swap==1
+if any(strcmp(Input.Variants,'Swap'))
     errors_nt=Data.error_nt;
     errors_nt_c=Data.error_nt_c;
 end
@@ -210,7 +209,7 @@ if ~strcmp(Input.Output,'Prior')
             p_T(i)=(1-s)*((1-p_c)*p_error(SS_range==SS(i),error_range==errors(i),1)+...
                 p_c*p_error_c(SS_range==SS(i),error_range==errors_c(i),1));
         end
-        if Input.Variants.Swap==1
+        if any(strcmp(Input.Variants,'Swap'))
             for i=1:length(errors_nt)
                 if SS(i)==1
                     p_NT(i)=0;
@@ -291,15 +290,15 @@ p_c=param(Nparam+3); % categorical weight
 p0(Nparam+3)=normpdf(p_c, 0.5, 1);
 Nparam=Nparam+3;
 if ~isfield(Input,'Variants') % No Variants
-    Input.Variants.Bias=0;
-    Input.Variants.Swap=0;
+    Input.Variants={};
 end
-if Input.Variants.Bias==1
+if any(strcmp(Input.Variants,'Bias'))
+    Nparam=Nparam+1;
     bias=param(Nparam); % Mean bias
     % Gaussian prior for bias
     p0(Nparam)=normpdf(bias, 0, 1);
 end
-if Input.Variants.Swap==1
+if any(strcmp(Input.Variants,'Swap'))
     Nparam=Nparam+1;
     s=param(Nparam); % Swap rate
     % Gaussian prior for the swap rate

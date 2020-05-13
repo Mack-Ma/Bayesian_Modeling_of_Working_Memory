@@ -3,11 +3,13 @@
 % 2nd-level hierachical model describing the probability of "choosing" a certain model
 % based on the model evidence for each model and each subject.
 % -----------------------
+% Output=BMW_BMC(LME,Config)
+%
 % ## Input ##
 % - LME
 % List of log model evidence (rows for each model & cols for each subject)
 % - Config
-% Options that configure the comparison process
+% Options that configure the comparsion process
 % ## Output ##
 % - output
 % Estimated parameters and estimation records of the 2nd-level model
@@ -24,7 +26,7 @@
 % BMW toolbox: https://github.com/BMW-Ma/Bayesian_Modeling_of_Working_Memory
 %
 
-function [output]=BMW_BMC(LME,Config)
+function [output]=BMW_BMS(LME,Config)
 
 if isfield(Config, 'Start'), a0=Config.Start; 
 else a0=ones(size(LME,1),1); end % Start values of the parameters of the dirichlet prior
@@ -84,9 +86,10 @@ output.EP=EP; % EP output
 end
 
 % Product of the gamcdf(s) for other models & the gampdf for the selected model
-% Consistent with the algorithm in Model Assessment, Comparison & Selection (MACS) Toolbox
+% Consistent with the algorithm in the Model Assessment, Comparison &
+% Selection (MACS) Toolbox of SPM
 % ## Reference ##
-% 
+% - Soch, J. (2018), "Exceedance Probabilities for the Dirichlet Distribution", arXiv: 1611.01439
 %
 function p=EPpdf(x,a1,a2)
 p=gampdf(x,a1,1); % Prob. of choosing a certain alpha

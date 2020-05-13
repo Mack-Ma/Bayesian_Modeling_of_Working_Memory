@@ -318,6 +318,7 @@ if ~isfield(Input,'Variants') % No Variants
     Input.Variants.PrecF=0;
 end
 if Input.Variants.Bias==1
+    Nparam=Nparam+1;
     bias=param(Nparam); % Mean bias
     % Gaussian prior for bias
     p0(Nparam)=normpdf(bias, 0, 1);

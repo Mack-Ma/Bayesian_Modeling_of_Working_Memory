@@ -41,13 +41,16 @@ varargout{1} = handles.output;
 
 % --- Executes on button press in Fit_Compare_BMW.
 function Fit_Compare_BMW_Callback(hObject, eventdata, handles)
+BMW_Run;
 
 % --- Executes on button press in Change_Settings_BMW.
 function Change_Settings_BMW_Callback(hObject, eventdata, handles)
+BMW_Change_Settings;
 
 % --- Executes on button press in About_BMW.
 function About_BMW_Callback(hObject, eventdata, handles)
-
+BMW_About;
 
 % --- Executes on button press in Manual_BMW.
 function Manual_BMW_Callback(hObject, eventdata, handles)
+BMW('Manual');
