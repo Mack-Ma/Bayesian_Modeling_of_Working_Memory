@@ -38,7 +38,7 @@ function [Info]=Info_BMW(Q, Data)
 if nargin==1
     switch Q.Item
         case 'Criteria_MAP'
-            Info={'WAIC1','WAIC2','LME_GHM'};
+            Info={'DIC2','WAIC2','LME_GHM'};
         case 'Criteria_MLE'
             Info={'LLH','AIC','BIC'};
         case 'Fit Options'
@@ -120,49 +120,34 @@ else
             Info.lb=[0, 0.001+zeros(1,Nss)];
         case 'Slots-plus-Averaging'
             Info.ParamInfo='Slots-plus-Averaging: K (capacity), kappa_1 (unit precision), kappa_r (motor noise)';
-            Info.start=[2, 50, 50];
-            Info.ub=[MaxSS+1e-6, 700, 700];
-            Info.lb=[0, 0.001, 0.001];
+            Info.start=[2, 50];
+            Info.ub=[MaxSS+1e-6, 700];
+            Info.lb=[0, 0.001];
         case 'Equal Precision'
             Info.ParamInfo='Equal Precision: kappa1_bar (precision at set size 1), power (precision decay rate), kappa_r (motor noise)';
-            Info.start=[50, 1, 50];
-            Info.ub=[700, 7, 700];
-            Info.lb=[0.001, 0.001, 0.001];
+            Info.start=[50, 1];
+            Info.ub=[700, 10];
+            Info.lb=[0.001, 0.001];
         case 'Variable Precision'
             Info.ParamInfo='Variable Precision: kappa1_bar (mean precision at set size 1), tau, power , kappa_r (motor noise)';
-            Info.start=[50, 10, 1, 50];
-            Info.ub=[700, 500, 10, 700];
-            Info.lb=[0.001, 0.001, 0, 0.001];
+            Info.start=[50, 50, 1];
+            Info.ub=[700, 700, 10];
+            Info.lb=[0.001, 0.001, 0];
         case 'Variable Precision with Capacity'
             Info.ParamInfo='Variable Precision with Capacity: kappa1_bar (mean precision at set size 1), tau, power (precision decay rate), kappa_r (motor noise), K (capacity)';
-            Info.start=[50, 1, 1, 50, 2];
-            Info.ub=[700, 500, 10, 700, MaxSS+1e-6];
-            Info.lb=[0.001, 0.001, 0, 0.001, 0];
-        case 'Categorical Standard Mixture (Between-Variant)'
-            Info.ParamInfo='Categorical Standard Mixture: K (capacity), kappa_1 (unit precision), kappa_r (motor noise), kappa_c(categorical precision), p_c(categorical memory rate)';
-            Info.start=[2, 50*ones(1,Nss), 50, 50, 0.3];
-            Info.ub=[MaxSS+1e-6, 700*ones(1,Nss), 700, 700, 1];
-            Info.lb=[0, 0.001+zeros(1,Nss), 0.001, 0.001, 0];
-        case 'Categorical Slots-plus-Averaging (Between-Variant)'
-            Info.ParamInfo='Categorical Slots-plus-Averaging: K (capacity), kappa_1 (unit precision), kappa_r (motor noise), kappa_c(categorical precision), p_c(categorical memory rate)';
-            Info.start=[2, 50, 50, 50, .3];
-            Info.ub=[MaxSS+1e-6, 700, 700, 700, 1];
-            Info.lb=[0, 0.001, 0.001, 0.001, 0];
-        case 'Categorical Slots-plus-Averaging (Within-Variant)'
-            Info.ParamInfo='Categorical Slots-plus-Averaging: K (capacity), kappa_1 (unit precision), kappa_r (motor noise), kappa_c(categorical precision), p_c(categorical memory rate)';
-            Info.start=[2, 50, 50, 50];
-            Info.ub=[MaxSS+1e-6, 700, 700, 700];
-            Info.lb=[0, 0.001, 0.001, 0.001];
-        case 'Categorical Variable Precision (Between-Variant)'
-            Info.ParamInfo='Categorical Variable Precision: kappa1_bar (mean precision at set size 1), tau, power (precision decay rate), kappa_r (motor noise), kappa_c (categorical precision), p_c(categorical memory rate)';
-            Info.start=[50, 1, 1, 50, 50, .3];
-            Info.ub=[700, 500, 10, 700, 700, 1];
-            Info.lb=[0.001, 0.001, 0, 0.001, 0.001, 0];
-        case 'Categorical Variable Precision with Capacity (Between-Variant)'
-            Info.ParamInfo='Categorical Variable Precision with Capacity: kappa1_bar (mean precision at set size 1), tau, power (precision decay rate), kappa_r (motor noise), K (capacity), kappa_c (categorical precision), p_c(categorical memory rate)';
-            Info.start=[50, 1, 1, 50, 2, 50, .3];
-            Info.ub=[700, 500, 10, 700, MaxSS+1e-6, 700, 1];
-            Info.lb=[0.001, 0.001, 0, 0.001, 0, 0.001, 0];
+            Info.start=[50, 50, 1, 2];
+            Info.ub=[700, 700, 10, MaxSS+1e-6];
+            Info.lb=[0.001, 0.001, 0, 0];
+        case 'Category-Only'
+            Info.ParamInfo='Category-Only: kappa_c (categorical precision)';
+            Info.start=50;
+            Info.ub=700;
+            Info.lb=0.001;
+        case 'Category-Only (with Capacity)'
+            Info.ParamInfo='Category-Only (with Capacity): kappa_c (categorical precision), K (capacity)';
+            Info.start=[50 2];
+            Info.ub=[700 MaxSS+1e-6];
+            Info.lb=[0.001, 0];
         case 'Fixed-Capacity (Full-Display)'
             Info.ParamInfo='Fixed-Capacity: K(capacity), g(guess)';
             Info.start=[2, 0.5];
@@ -181,19 +166,38 @@ else
     end
     if isfield(Q, 'Variants')
         % Continuous recall models
+        if any(strcmp(Q.Variants,'Category (Between-Item)')) && any(strcmp(Q.Model,{'Standard Mixture','Slots-plus-Averaging',...
+                'Variable Precision','Variable Precision with Capacity'}));
+            Info.ParamInfo=[Info.ParamInfo, ', kappa_c (categorical precision), p_c (categorical memory rate)'];
+            Info.start=[Info.start, 50, 0.5];
+            Info.ub=[Info.ub, 700, 1];
+            Info.lb=[Info.lb, 0.001, 0];
+        end
+        if any(strcmp(Q.Variants,'Category (Within-Item)')) && any(strcmp(Q.Model,{'Slots-plus-Averaging','Variable Precision'}))
+            Info.ParamInfo=[Info.ParamInfo, ', kappa_c (categorical precision), eps_c (categorical memory scaling)'];
+            Info.start=[Info.start, 50, 0.5];
+            Info.ub=[Info.ub, 700, 7];
+            Info.lb=[Info.lb, 0.001, -7];
+        end
+        if any(strcmp(Q.Variants,'ResponseNoise')) && ~any(strcmp(Q.Model,{'Item Limit'}))
+            Info.ParamInfo=[Info.ParamInfo, ', kappa_r(response precision)'];
+            Info.start=[Info.start, 50];
+            Info.ub=[Info.ub, 700];
+            Info.lb=[Info.lb, 0.001];
+        end
         if any(strcmp(Q.Variants,'Bias'))
             Info.ParamInfo=[Info.ParamInfo, ', mu(bias)'];
             Info.start=[Info.start, 0];
             Info.ub=[Info.ub, 90];
             Info.lb=[Info.lb, -90];
         end
-        if any(strcmp(Q.Variants,'BiasF'))
+        if any(strcmp(Q.Variants,'BiasF')) && ~any(strcmp(Q.Variants,{'Category (Between-Item)','Category (Within-Item)'}))
             Info.ParamInfo=[Info.ParamInfo, ', muf(bias fluctuation)'];
             Info.start=[Info.start, 0.1];
             Info.ub=[Info.ub, 90];
             Info.lb=[Info.lb, -90];
         end
-        if any(strcmp(Q.Variants,'PrecF'))
+        if any(strcmp(Q.Variants,'PrecF')) && ~any(strcmp(Q.Variants,{'Category (Between-Item)','Category (Within-Item)'})) && ~any(strcmp(Q.Model,'Item Limit'))
             Info.ParamInfo=[Info.ParamInfo, ', kappa_f(precision fluctuation)'];
             Info.start=[Info.start, 0.1];
             Info.ub=[Info.ub, 7];

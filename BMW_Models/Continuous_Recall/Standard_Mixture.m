@@ -21,7 +21,7 @@
 % (Data.sample_range, Data.sample, Data.error_nt, Data.sample_nt)
 %
 % - Input
-% Input.Variant 
+% Input.Variant
 %   options of model variants
 %       Input.Variants.Bias, 0/1 to decide whether consider representational
 %       shift/response bias
@@ -65,195 +65,258 @@
 
 function Output=Standard_Mixture(param, Data, Input)
 
-% Specify parameters
-K=param(1); % Capacity
-SS=Data.SS;
-SS_range=unique(SS);
-kappa_SS=param(2:1+length(SS_range)); % Precision
-Nparam=length(SS_range)+1;
-if ~isfield(Input,'Variants') % No Variants
-    Input.Variants={};
-end
-if ~any(strcmp(Input.Variants,'Bias'))
-    bias=0; % Responses concentrate on samples
+if isfield(Input,'Variants') && any(strcmp(Input.Variants,'Category (Within-Item)'))
+    Output=Categorical_Standard_Mixture_WI(param,Data,Input);
+elseif isfield(Input,'Variants') && any(strcmp(Input.Variants,'Category (Between-Item)'))
+    Output=Categorical_Standard_Mixture_BI(param,Data,Input);
 else
-    Nparam=Nparam+1;
-    bias=param(Nparam); % Mean bias
-end
-if ~any(strcmp(Input.Variants,'BiasF'))
-    biasF=0; % Set bias as a consistent value
-else
-    Nparam=Nparam+1;
-    biasF=param(Nparam); % Fluctuation of bias
-end
-if ~any(strcmp(Input.Variants,'PrecF'))
-    precF=0; % Set precision as consistent within each set size
-else
-    Nparam=Nparam+1;
-    precF=param(Nparam); % Fluctuation of precision
-end
-if ~any(strcmp(Input.Variants,'Swap'))
-    s=0; % No swap
-else
-    Nparam=Nparam+1;
-    s=param(Nparam); % Swap rate
-end
-
-% Configuration
-errors=Data.error;
-error_range=Data.error_range;
-if length(error_range)==2
-    continuous=1;
-else
-    continuous=0;
-end
-K=floor(K); % Note that capacity is a fixed, discrete value here
-if any(strcmp(Input.Variants,'BiasF')) || any(strcmp(Input.Variants,'PrecF'))
-    sample_range=Data.sample_range;
-    samples=Data.sample;
-else
-    samples=ones(1,length(errors));
-    sample_range=1;
-end
-if any(strcmp(Input.Variants,'Swap'))
-    errors_nt=Data.error_nt;
-    if any(strcmp(Input.Variants,'BiasF')) || any(strcmp(Input.Variants,'PrecF'))
-        samples_nt=Data.sample_nt;
+    % Specify parameters
+    K=param(1); % Capacity
+    SS=Data.SS;
+    SS_range=unique(SS);
+    kappa_SS=param(2:1+length(SS_range)); % Precision
+    Nparam=length(SS_range)+1;
+    if ~isfield(Input,'Variants') % No Variants
+        Input.Variants={};
     end
-end
-if strcmp(Input.Output,'LP') || strcmp(Input.Output,'Prior') || strcmp(Input.Output,'All')
-    Prior=prior(param, Input, length(kappa_SS)); % get prior
-elseif strcmp(Input.Output,'LLH') || strcmp(Input.Output,'LPPD')
-    Prior=1; % uniform prior
-end
-
-if ~strcmp(Input.Output,'Prior')
-    % LH function
-    if continuous==1
-        p_error=zeros(1,length(errors));
-        p_error_NT=zeros(1,length(errors));
-        kappa0=exp(log(kappa_SS')*(cosd(4*samples)).^precF); % Flucutuative precision
-        for i_error=1:length(errors)
-            N=SS(i_error);
-            error0=errors(i_error)+bias+biasF*cosd(4*samples(i_error)-90);
-            i_N=SS_range==N;
-            if K<N % beyond capacity
-                p_error(i_error)=(1-K/N)*1/(error_range(2)-error_range(1))+(K/N)*exp(kappa0(i_N,i_error).*cosd(error0))./(2*pi*besseli0_fast(kappa0(i_N,i_error)));
-            else % within capacity
-                p_error(i_error)=exp(kappa0(i_N,i_error).*cosd(error0))./(2*pi*besseli0_fast(kappa0(i_N,i_error)));
+    if any(strcmp(Input.Variants,'ResponseNoise'))
+        Nparam=Nparam+1;
+        kappa_r=param(Nparam); % Response precision
+    end
+    if ~any(strcmp(Input.Variants,'Bias'))
+        bias=0; % Responses concentrate on samples
+    else
+        Nparam=Nparam+1;
+        bias=param(Nparam); % Mean bias
+    end
+    if ~any(strcmp(Input.Variants,'BiasF'))
+        biasF=0; % Set bias as a consistent value
+    else
+        Nparam=Nparam+1;
+        biasF=param(Nparam); % Fluctuation of bias
+    end
+    if ~any(strcmp(Input.Variants,'PrecF'))
+        precF=0; % Set precision as consistent within each set size
+    else
+        Nparam=Nparam+1;
+        precF=param(Nparam); % Fluctuation of precision
+    end
+    if ~any(strcmp(Input.Variants,'Swap'))
+        s=0; % No swap
+    else
+        Nparam=Nparam+1;
+        s=param(Nparam); % Swap rate
+    end
+    
+    % Configuration
+    samples=Data.sample;
+    responses=Data.response;
+    error_range=Data.error_range;
+    if length(error_range)==2
+        continuous=1;
+        period=error_range(2)-error_range(1);
+    else
+        continuous=0;
+        period=max(error_range)-min(error_range)+(error_range(2)-error_range(1));
+    end
+    errors=CircDist_BMW('Diff',responses,samples,period);
+    SS=Data.SS;
+    SS_range=unique(SS);
+    if ~any(strcmp(Input.Variants,'ContinuousK'))
+        K=floor(K); % Note that capacity is a fixed, discrete value here
+    end
+    if any(strcmp(Input.Variants,'BiasF')) || any(strcmp(Input.Variants,'PrecF'))
+        if isfield(Data,'sample_range')
+            sample_range=Data.sample_range;
+        end
+        samples_cos=samples;
+    else
+        samples_cos=ones(1,length(errors));
+        sample_range=1;
+    end
+    if any(strcmp(Input.Variants,'Swap'))
+        samples_nt=Data.sample_nt;
+        errors_nt=CircDist_BMW('Diff',repmat(responses,[1,size(samples_nt,2)]),samples_nt,period);
+        if any(strcmp(Input.Variants,'BiasF')) || any(strcmp(Input.Variants,'PrecF'))
+            samples_nt_cos=samples_nt;
+        else
+            samples_nt_cos=ones(size(samples_nt,1),size(samples_nt,2));
+        end
+    end
+    if strcmp(Input.Output,'LP') || strcmp(Input.Output,'Prior') || strcmp(Input.Output,'All')
+        Prior=prior(param, Input, length(kappa_SS)); % get prior
+    elseif strcmp(Input.Output,'LLH') || strcmp(Input.Output,'LPPD')
+        Prior=1; % uniform prior
+    end
+    
+    if ~strcmp(Input.Output,'Prior')
+        % LH function
+        if continuous==1
+            p_error=zeros(1,length(errors));
+            p_error_NT=zeros(1,length(errors));
+            kappa0=exp(log(kappa_SS')*(cosd(4*samples_cos)).^precF); % Flucutuative precision
+            for i_error=1:length(errors)
+                N=SS(i_error);
+                error0=errors(i_error)+bias+biasF*cosd(4*samples_cos(i_error)-90);
+                i_N=SS_range==N;
+                if any(strcmp(Input.Variants,'ResponseNoise'))
+                    if K<N % beyond capacity
+                        conv_kappa=sqrt(kappa0(i_N,i_error).^2+kappa_r^2+2*kappa0(i_N,i_error)*kappa_r.*cosd(error0));
+                        p_error(i_error)=besseli(0,conv_kappa)./(2*pi*besseli(0,kappa0(i_N,i_error))*besseli(0,kappa_r));
+                    else % within capacity
+                        p_error(i_error)=exp(kappa0(i_N,i_error).*cosd(error0))./(2*pi*besseli(0,kappa0(i_N,i_error)));
+                    end
+                else
+                    if K<N % beyond capacity
+                        p_error(i_error)=(1-K/N)*1/(error_range(2)-error_range(1))+(K/N)*exp(kappa0(i_N,i_error).*cosd(error0))./(2*pi*besseli(0,kappa0(i_N,i_error)));
+                    else % within capacity
+                        p_error(i_error)=exp(kappa0(i_N,i_error).*cosd(error0))./(2*pi*besseli(0,kappa0(i_N,i_error)));
+                    end
+                end
+                
+                if any(strcmp(Input.Variants,'Swap'))
+                    if N==1
+                        p_error_NT(i_error)=0;
+                    else
+                        p_temp_NT=0;
+                        if any(strcmp(Input.Variants,'ResponseNoise'))
+                            for i_nt=1:N-1
+                                error0_nt=errors_nt(i_error,i_nt)+bias+biasF*cosd(4*samples_nt_cos(i_error,i_nt)-90); % Errors with bias
+                                conv_kappa_NT=sqrt(kappa0(i_N,i_error).^2+kappa_r^2+2*kappa0(i_N,i_error)*kappa_r.*cosd(error0_nt));
+                                if K<N
+                                    p_temp_NT=p_temp_NT+(1-K/N)*1/(error_range(2)-error_range(1))+(K/N)*besseli(0,conv_kappa_NT)./(2*pi*besseli(0,kappa0(i_N,i_error))*besseli(0,kappa_r));
+                                else
+                                    p_temp_NT=p_temp_NT+besseli(0,conv_kappa_NT)./(2*pi*besseli(0,kappa0(i_N,i_error))*besseli(0,kappa_r));
+                                end
+                            end
+                        else
+                            for i_nt=1:N-1
+                                error0_nt=errors_nt(i_error,i_nt)+bias+biasF*cosd(4*samples_nt_cos(i_error,i_nt)-90); % Errors with bias
+                                if K<N % beyond capacity
+                                    p_temp_NT=p_temp_NT+(1-K/N)*1/(error_range(2)-error_range(1))+(K/N)*exp(kappa0(i_N,i_error).*cosd(error0_nt))./(2*pi*besseli(0,kappa0(i_N,i_error)));
+                                else % within capacity
+                                    p_temp_NT=p_temp_NT+exp(kappa0(i_N,i_error).*cosd(error0_nt))./(2*pi*besseli(0,kappa0(i_N,i_error)));
+                                end
+                            end
+                        end
+                        p_error_NT(i_error)=p_temp_NT/(N-1);
+                    end
+                end
+            end
+            p_T=(1-s)*p_error;
+            p_NT=s*p_error_NT;
+            p_LH=p_T+p_NT;
+        else
+            kappa0=zeros(length(SS_range),length(sample_range));
+            for i_N=1:length(SS_range)
+                kappa0(i_N,:)=exp(log(kappa_SS(i_N))*(cosd(4*sample_range)).^precF); % Flucutuative precision
+            end
+            bias_cur=bias+biasF*cosd(4*sample_range-90); % Fluctuative bias
+            p_error=zeros(length(SS_range), length(error_range), length(sample_range));
+            for i_N=1:length(SS_range)
+                N=SS_range(i_N);
+                if K<N % beyond capacity
+                    if any(strcmp(Input.Variants,'ResponseNoise'))
+                        for i_error=1:length(error_range)
+                            error0=error_range(i_error)+bias_cur;
+                            % Von Mises distribution convoluted by kappa_r
+                            conv_kappa=sqrt(kappa0(i_N,:).^2+kappa_r^2+2*kappa0(i_N,:)*kappa_r.*cosd(error0));
+                            p_error(i_N,i_error,:)=(1-K/N)*1/length(error_range)+...
+                                (K/N)*besseli(0,conv_kappa)./(2*pi*besseli(0,kappa0(i_N,:))*besseli(0,kappa_r));
+                        end
+                    else
+                        for i_error=1:length(error_range)
+                            error0=error_range(i_error)+bias_cur;
+                            p_error(i_N,i_error,:)=(1-K/N)*1/length(error_range)+...
+                                (K/N)*exp(kappa0(i_N,:).*cosd(error0))./(2*pi*besseli(0,kappa0(i_N,:)));
+                        end
+                    end
+                    for i_sample=1:length(sample_range)
+                        p_error(i_N,:,i_sample)=p_error(i_N,:,i_sample)/sum(p_error(i_N,:,i_sample));
+                    end
+                else
+                    if any(strcmp(Input.Variants,'ResponseNoise'))
+                        for i_error=1:length(error_range)
+                            error0=error_range(i_error)+bias_cur;
+                            % Von Mises distribution convoluted by kappa_r
+                            conv_kappa=sqrt(kappa0(i_N,:).^2+kappa_r^2+2*kappa0(i_N,:)*kappa_r.*cosd(error0));
+                            p_error(i_N,i_error,:)=besseli(0,conv_kappa)./(2*pi*besseli(0,kappa0(i_N,:))*besseli(0,kappa_r));
+                        end
+                    else
+                        for i_error=1:length(error_range)
+                            error0=error_range(i_error)+bias_cur;
+                            p_error(i_N,i_error,:)=exp(kappa0(i_N,:).*cosd(error0))./(2*pi*besseli(0,kappa0(i_N,:)));
+                        end
+                    end
+                    for i_sample=1:length(sample_range)
+                        p_error(i_N,:,i_sample)=p_error(i_N,:,i_sample)/sum(p_error(i_N,:,i_sample)); % Normalization
+                    end
+                end
             end
             
-            if any(strcmp(Input.Variants,'Swap'))
-                if N==1
-                    p_error_NT(i_error)=0;
+            % Calculate LH
+            p_T=zeros(1,length(errors));
+            p_NT=zeros(1,length(errors));
+            for i=1:length(errors)
+                if any(strcmp(Input.Variants,'BiasF')) || any(strcmp(Input.Variants,'PrecF'))
+                    p_T(i)=(1-s)*p_error(SS_range==SS(i),error_range==errors(i), sample_range==samples_cos(i));
                 else
-                    p_temp_NT=0;
-                    for i_nt=1:N-1
-                        error0_nt=errors_nt(i_nt, i_error)+bias+biasF*cosd(4*samples(i_error)-90); % Errors with bias
-                        if K<N % beyond capacity
-                            p_temp_NT=p_temp_NT+(1-K/N)*1/(error_range(2)-error_range(1))+(K/N)*exp(kappa0(i_N,i_error).*cosd(error0_nt))./(2*pi*besseli0_fast(kappa0(i_N,i_error)));
-                        else % within capacity
-                            p_temp_NT=p_temp_NT+exp(kappa0(i_N,i_error).*cosd(error0_nt))./(2*pi*besseli0_fast(kappa0(i_N,i_error)));
+                    p_T(i)=(1-s)*p_error(SS_range==SS(i),error_range==errors(i), 1);
+                end
+            end
+            if any(strcmp(Input.Variants,'Swap'))
+                for i=1:length(errors_nt)
+                    if SS(i)==1
+                        p_NT(i)=0;
+                    else
+                        for j=1:SS(i)-1
+                            if any(strcmp(Input.Variants,'BiasF')) || any(strcmp(Input.Variants,'PrecF'))
+                                p_NT(i)=p_NT(i)+s/(SS(i)-1)*p_error(SS_range==SS(i),error_range==errors_nt(i,j), sample_range==samples_nt_cos(i,j));
+                            else
+                                p_NT(i)=p_NT(i)+s/(SS(i)-1)*p_error(SS_range==SS(i),error_range==errors_nt(i,j), 1);
+                            end
                         end
                     end
-                    p_error_NT(i_error)=p_temp_NT/(N-1);
                 end
             end
-        end
-        p_T=(1-s)*p_error;
-        p_NT=s*p_error_NT;
-        p_LH=p_T+p_NT;
-    else
-        kappa0=zeros(length(SS_range),length(sample_range));
-        for i_N=1:length(SS_range)
-            kappa0(i_N,:)=exp(log(kappa_SS(i_N))*(cosd(4*sample_range)).^precF); % Flucutuative precision
-        end
-        bias_cur=bias+biasF*cosd(4*sample_range-90); % Fluctuative bias
-        p_error=zeros(length(SS_range), length(error_range), length(sample_range));
-        for i_N=1:length(SS_range)
-            N=SS_range(i_N);
-            if K<N % beyond capacity
-                for i_error=1:length(error_range)
-                    error0=error_range(i_error)+bias_cur;
-                    p_error(i_N,i_error,:)=(1-K/N)*1/length(error_range)+...
-                        (K/N)*exp(kappa0(i_N,:).*cosd(error0))./(2*pi*besseli0_fast(kappa0(i_N,:)));
-                end
-                for i_sample=1:length(sample_range)
-                    p_error(i_N,:,i_sample)=p_error(i_N,:,i_sample)/sum(p_error(i_N,:,i_sample));
-                end
-            else
-                for i_error=1:length(error_range)
-                    error0=error_range(i_error)+bias_cur;
-                    p_error(i_N,i_error,:)=exp(kappa0(i_N,:).*cosd(error0))./(2*pi*besseli0_fast(kappa0(i_N,:)));
-                end
-                for i_sample=1:length(sample_range)
-                    p_error(i_N,:,i_sample)=p_error(i_N,:,i_sample)/sum(p_error(i_N,:,i_sample)); % Normalization
-                end
-            end
+            p_LH=p_T+p_NT; % Target + non-target LH
         end
         
-        % Calculate LH
-        p_T=zeros(1,length(errors));
-        p_NT=zeros(1,length(errors));
-        for i=1:length(errors)
-            if any(strcmp(Input.Variants,'BiasF')) || any(strcmp(Input.Variants,'PrecF'))
-                p_T(i)=(1-s)*p_error(SS_range==SS(i),error_range==errors(i), sample_range==samples(i));
-            else
-                p_T(i)=(1-s)*p_error(SS_range==SS(i),error_range==errors(i), 1);
-            end
+        % LLH
+        if isfield(Input,'PDF') && Input.PDF==1
+            LLH.error=p_error; % PDF
+        else
+            LLH=-sum(log(p_LH)); % Negative LLH
         end
-        if any(strcmp(Input.Variants,'Swap'))
-            for i=1:length(errors_nt)
-                if SS(i)==1
-                    p_NT(i)=0;
-                else
-                    for j=1:SS(i)-1
-                        if any(strcmp(Input.Variants,'BiasF')) || any(strcmp(Input.Variants,'PrecF'))
-                            p_NT(i)=p_NT(i)+s/(SS(i)-1)*p_error(SS_range==SS(i),error_range==errors_nt(j,i), sample_range==samples_nt(j,i));
-                        else
-                            p_NT(i)=p_NT(i)+s/(SS(i)-1)*p_error(SS_range==SS(i),error_range==errors_nt(j,i), 1);
-                        end
-                    end
-                end
-            end
+        
+        if K>max(SS) % K cannot be larger than the set size
+            LLH=realmax('double');
         end
-        p_LH=p_T+p_NT; % Target + non-target LH
+        
+        % Posterior
+        LP=-log(Prior)+LLH; % likelihood*prior
+        
     end
     
-    % LLH
-    if isfield(Input,'PDF') && Input.PDF==1
-        LLH.error=p_error; % PDF
-    else
-        LLH=-sum(log(p_LH)); % Negative LLH
+    % Decide output
+    if strcmp(Input.Output,'LP')
+        Output=LP;
+    elseif strcmp(Input.Output,'LLH')
+        Output=LLH;
+    elseif strcmp(Input.Output,'Prior')
+        Output=Prior;
+    elseif strcmp(Input.Output,'LPPD')
+        Output=log(p_LH);
+    elseif strcmp(Input.Output,'All')
+        Output.LP=LP;
+        Output.LLH=LLH;
+        Output.Prior=Prior;
+        Output.LPPD=log(p_LH);
     end
     
-    if K>max(SS) % K cannot be larger than the set size
-        LLH=realmax('double');
+    if ~isstruct(Output) && (any(abs(Output))==Inf || any(isnan(LLH)))
+        Output=realmax('double'); % LP should be a real value
     end
-    
-    % Posterior
-    LP=-log(Prior)+LLH; % likelihood*prior
-    
-end
-
-% Decide output
-if strcmp(Input.Output,'LP')
-    Output=LP;
-elseif strcmp(Input.Output,'LLH')
-    Output=LLH;
-elseif strcmp(Input.Output,'Prior')
-    Output=Prior;
-elseif strcmp(Input.Output,'LPPD')
-    Output=log(p_LH);
-elseif strcmp(Input.Output,'All')
-    Output.LP=LP;
-    Output.LLH=LLH;
-    Output.Prior=Prior;
-    Output.LPPD=log(p_LH);
-end
-
-if ~isstruct(Output) && (any(abs(Output))==Inf || any(isnan(LLH)))
-    Output=realmax('double'); % LP should be a real value
 end
 
 end
@@ -271,6 +334,12 @@ p0(2:1+Nkappa)=gampdf(kappa_SS,3,10);
 Nparam=Nkappa+1;
 if ~isfield(Input,'Variants') % No Variants
     Input.Variants={};
+end
+if any(strcmp(Input.Variants,'ResponseNoise'))
+    Nparam=Nparam+1;
+    kappa_r=param(Nparam);
+    % Gamma prior for response precision
+    p0(Nparam)=gampdf(kappa_r,3,5);
 end
 if any(strcmp(Input.Variants,'Bias'))
     Nparam=Nparam+1;

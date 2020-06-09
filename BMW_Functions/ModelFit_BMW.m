@@ -52,9 +52,9 @@ LLH=zeros(Nsubj,1); AIC=zeros(Nsubj,1); BIC=zeros(Nsubj,1);
 AICc=zeros(Nsubj,1); DIC1=zeros(Nsubj,1); DIC2=zeros(Nsubj,1);
 DICs=zeros(Nsubj,1); WAIC1=zeros(Nsubj,1); WAIC2=zeros(Nsubj,1);
 LME_GHM=zeros(Nsubj,1); LME_BS=zeros(Nsubj,1);
-% Set priorc
+% Set prior
 Config_Fit=MA_BMW.Model;
-if strcmp(MA_BMW.FitOptions.Method,'MAP') 
+if strcmp(MA_BMW.FitOptions.Method,'MAP')
     if MA_BMW.FitOptions.UniformPrior==1
         Config_Fit.Output='LLH';
     else
@@ -65,12 +65,12 @@ elseif strcmp(MA_BMW.FitOptions.Method,'MLE')
 else
     error('Invalid Fit Method...')
 end
-% Convert model name
+% Convert model names
 ModelName=MN_Convert_BMW(MA_BMW.Model.Model);
 % Fit
 fprintf('\nSubject: %s\n','1')
 [Param0,Quality]=BMW_Fit(Data{1},Config_Fit,ModelName,MA_BMW.Constraints,MA_BMW.FitOptions);
-Ntrial=length(Data{1}.error);
+Ntrial=length(Data{1}.sample);
 Nparam=length(Param0);
 Param=zeros(Nsubj,Nparam);
 Param(1,:)=Param0;
@@ -123,7 +123,7 @@ end
 %% LME (BS/GHM), DIC1, DIC2, DIC*, WAIC1, WAIC2
 % Calculate LME based on MCMC
 if any(strcmp(MA_BMW.Criteria,'DIC1')) || any(strcmp(MA_BMW.Criteria,'DIC2')) || any(strcmp(MA_BMW.Criteria,'DIC*')) || any(strcmp(MA_BMW.Criteria,'WAIC1'))...
-       || any(strcmp(MA_BMW.Criteria,'WAIC2')) || any(strcmp(MA_BMW.Criteria,'LME_BS')) || any(strcmp(MA_BMW.Criteria,'LME_GHM'))
+        || any(strcmp(MA_BMW.Criteria,'WAIC2')) || any(strcmp(MA_BMW.Criteria,'LME_BS')) || any(strcmp(MA_BMW.Criteria,'LME_GHM'))
     fprintf('\nNow start estimate LME_BS/LME_GHM/DIC1/DIC2/DIC*/WAIC1/WAIC2...\n')
     if isfield(Quality,'MCMCResult')
         for subj=1:Nsubj
@@ -132,6 +132,14 @@ if any(strcmp(MA_BMW.Criteria,'DIC1')) || any(strcmp(MA_BMW.Criteria,'DIC2')) ||
             Model_MCMC.Model=ModelName;
             Model_MCMC.Constraints=MA_BMW.Constraints;
             MCMCcur=Quality_Fit{subj}.MCMCResult;
+            switch MA_BMW.FitOptions.Display
+                case 'iter'
+                    Method.Verbosity=1;
+                case 'detail'
+                    Method.Verbosity=2;
+                case 'off'
+                    Method.Verbosity=0;
+            end
             if any(strcmp(MA_BMW.Criteria,'LME_BS'))
                 Method.IC='LME_BridgeSampling';
                 LME_BS(subj)=BMW_GetIC_MCMC(MCMCcur,Model_MCMC,Data{subj},Method);
@@ -180,6 +188,14 @@ if any(strcmp(MA_BMW.Criteria,'DIC1')) || any(strcmp(MA_BMW.Criteria,'DIC2')) ||
                 end
                 [MCMCcur,~]=BMW_parMCMC(Model_MCMC, Data, Config_MCMC);
                 Quality.MCMCResult=MCMCcur;
+                switch MA_BMW.FitOptions.Display
+                    case 'iter'
+                        Method.Verbosity=1;
+                    case 'detail'
+                        Method.Verbosity=2;
+                    case 'off'
+                        Method.Verbosity=0;
+                end
                 if any(strcmp(MA_BMW.Criteria,'LME_GHM'))
                     Method.IC='LME_HarmonicMean';
                     LME_GHM(subj)=BMW_GetIC_MCMC(MCMCcur,Model_MCMC,Data{subj},Method);
@@ -216,9 +232,13 @@ end
 
 %% Epilogue
 MA_BMW.Param=Param;
+MCMCAll=cell(1,Nsubj);
 if isfield(Quality,'MCMCResult')
-    MA_BMW.MCMC=Quality.MCMCResult;
+    for subj=1:Nsubj
+        MCMCAll{subj}=Quality_Fit{subj}.MCMCResult;
+    end
 end
+MA_BMW.MCMC=MCMCAll;
 if isfield(MA_BMW.Criteria,'Output') && MA_BMW.Criteria.Output==1
     MA_BMW.Output=Output;
 end
@@ -231,14 +251,14 @@ C.DIC2=DIC2;
 C.DICs=DICs;
 C.WAIC1=WAIC1;
 C.WAIC2=WAIC2;
-C.LME_BS=-LME_BS;
-C.LME_GHM=-LME_GHM;
+C.LME_BS=LME_BS;
+C.LME_GHM=LME_GHM;
 % delete all empty subfields
 MA_MC=fieldnames(C);
 for i=1:length(MA_MC)
     eval(['CurField=C.',MA_MC{i},';'])
     if isfloat(CurField) && ~any(any(CurField))
-       C=rmfield(C,MA_MC{i});
+        C=rmfield(C,MA_MC{i});
     end
 end
 MA_MC2=fieldnames(C);

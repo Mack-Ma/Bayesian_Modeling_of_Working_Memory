@@ -37,7 +37,9 @@ Verbosity=Config.Verbosity; % Assign 1 to display iterations
 Nmodel=size(LME,1); % Total # of models
 
 % Start iteration (variational bayes approximation)
-fprintf('\nNow start 2nd-level bayesian model comparison... \n')
+if Verbosity==1
+    fprintf('\nNow start 2nd-level bayesian model comparison... \n')
+end
 a=a0; % Specify start value
 FlagIter=0; % # of iteration
 RecIter=zeros(1,Nmodel);
@@ -52,15 +54,19 @@ while 1
         RecIter(FlagIter,:)=a;
     end
     if norm(a-a_prev)<Stop % Converge
-        fprintf('\n\n----------\n')
-        fprintf('\n## Break iteration: Converge at %s times of iteration ##\n', num2str(FlagIter))
-        fprintf('\n----------\n\n')
+        if Verbosity==1
+            fprintf('\n\n----------\n')
+            fprintf('\n## Break iteration: Converge at %s times of iteration ##\n', num2str(FlagIter))
+            fprintf('\n----------\n\n')
+        end
         break;
     end
     if FlagIter==MaxIter % Fail convergence after max # of iteration
-        fprintf('\n\n----------\n')
-        fprintf('\n## Break iteration: Reach max number of iteration (%s) ##\n', num2str(MaxIter))
-        fprintf('\n----------\n\n')
+        if Verbosity==1
+            fprintf('\n\n----------\n')
+            fprintf('\n## Break iteration: Reach max number of iteration (%s) ##\n', num2str(MaxIter))
+            fprintf('\n----------\n\n')
+        end
         break;
     end
     if Verbosity==1

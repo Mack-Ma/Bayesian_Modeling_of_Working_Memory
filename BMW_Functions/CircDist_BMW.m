@@ -6,7 +6,6 @@
 %
 % - Stat
 % A string that specifies the output, potential choices are,
-%       'Ang', angular distance
 %       'Diff', angular difference (with directionality: Data1-Data2)
 %       'Cos', cosine distance
 %

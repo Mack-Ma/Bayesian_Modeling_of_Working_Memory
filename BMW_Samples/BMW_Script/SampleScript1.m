@@ -19,64 +19,38 @@
 close all
 clear variables
 ModelSpace={'Item Limit', 'Standard Mixture', 'Slots-plus-Averaging', 'Equal Precision', 'Variable Precision', 'Variable Precision with Capacity',...
-    'Categorical Slots-plus-Averaging', 'Categorical Variable Precision', 'Categorical Variable Precision with Capacity'}; % Full model space
+    'Category-Only','Category-Only (with Capacity)'}; % Full model space
 Nmodel=length(ModelSpace);
+
 % Load toolbox
 addpath('Your BMW Toolbox Path')
-BMW('Silent');
-% Load Data
-addpath('Your Data Path')
-load('Your Data.mat') % File name should be revised accordingly
-Nsubj=length(Data); % Variable name (Data) should be revised accordingly
+BMW('AddPath');
 
-%% Model Definition, Configuration & Estimation
-MA_All=cell(1,Nmodel); % Pre-Allocation
-for i=1:Nmodel
-    fprintf('\n%s\n',ModelSpace{i})
-    Config_MA.Data=Data;
+MA_All=cell(1,length(ModelSpace)); % Pre-allocation
+for i=1:length(ModelSpace) % loop models
+    
+    % Specify data
+    MA.Data='Your Data Path'; % e.g. E:/HAHAHAHA/Data_Hahaha_1st_continuous.mat
+    
     % Specify model
-    Config_MA.Model.Model=ModelSpace{i};
-    % Set Variants (Optional)
-    Config_MA.Model.Variants.Swap=0; % Swap rate
-    Config_MA.Model.Variants.PrecF=0; % Fluctuation of precision
-    Config_MA.Model.Variants.BiasF=0; % Fluctuation of bias
-    Config_MA.Model.Variants.Bias=0; % Bias
-    % Model definition
-    MA=ModelDefinition_BMW(Config_MA);
-%     Config_MA.Criteria.LLH=1; % Assign 1 to calculate log likelihood
-%     Config_MA.Criteria.AIC=1; % Assign 1 to calculate AIC
-%     Config_MA.Criteria.AICc=1; % Assign 1 to calculate AICc
-%     Config_MA.Criteria.BIC=1; % Assign 1 to calculate BIC
-%     Config_MA.Criteria.DIC=1; % Assign 1 to calculate DIC
-%     Config_MA.Criteria.WAIC=1; % Assign 1 to calculate WAIC
-%     Config_MA.Criteria.LME=1; % % Assign 1 to calculate log marginal likelihood
-    % All default
-    Config_MA.Criteria.Default=1;  
-    Config_MA.Constraints.Default=1;
-    Config_MA.FitOptions.Default=1;
-%     Config_MA.FitOptions.Algorithm='SA'; % Change the optimization algorithm (Default: 'DE-MCMC')
-%     Config_MA.FitOptions.MaxIter=3000; % Change the max # of iteration (Default: 5000)
-%     Config_MA.FitOptions.Display='off'; % Change the display mode (Default: 'iter')
-    Config_MA.InputFile=MA;
+    MA.Model.Model=ModelSpace{i};
+    MA.Model.Variants={'ContinuousK'}; % Consider a continuous capacity
+    
+    % Here shows all the model variants
+%     MA.Model.Variants={'ContinuousK', 'ResponseNoise', 'Bias', 'Swap', 'Bias Fluctuation', 'Precision Fluctuation',...
+%         'Category (Within-Item)', 'Category (Between-Item)'};
+
     % Configuration
-    MA=Configuration_BMW(Config_MA);
+    MA=Configuration_BMW(MA);
+    
     % Estimation
     MA=ModelFit_BMW(MA);
-    MA_All{i}=MA;
+    MA_All{i}=MA; % pack the results into a cell variable
+    
 end
 
 %% Model Comparison
-Config_MC.MS=MA_All; % Define model space
-Config_MC.Criterion='LLH';
-MC_All.LLH=ModelComparison_BMW(Config_MC);
-Config_MC.Criterion='AIC';
-MC_All.AIC=ModelComparison_BMW(Config_MC);
-Config_MC.Criterion='AICc';
-MC_All.AICc=ModelComparison_BMW(Config_MC);
-Config_MC.Criterion='BIC';
-MC_All.BIC=ModelComparison_BMW(Config_MC);
-% Config_MC.Criterion='LME';
-% MC_All.LME=ModelComparison_BMW(Config_MC); % Make comparison based on LME
+MC=ModelComparison_BMW(MA_All);
 
 %% Epilogue
 % Save
@@ -84,4 +58,3 @@ cd('Your save directory') % cd to the directory where you gonna save the results
 save('Your Filename') % Save all variables
 % Remove paths
 rmpath('Your BMW Toolbox Path')
-rmpath('Your Data Path')

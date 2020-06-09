@@ -171,7 +171,6 @@ elseif Ncore<1 || rem(Ncore,1)~=0
     error('The number of cores is invalid...')
 end
 addAttachedFiles(gcp,model.Model);
-addAttachedFiles(gcp,'besseli0_fast');
 
 %% MCMC
 if strcmp(config.Algorithm,'DE') % Differential Evolution
@@ -181,8 +180,7 @@ if strcmp(config.Algorithm,'DE') % Differential Evolution
     fprintf('\nNow start DE-MCMC sampling...\n')
     for t_burnin=1:MAXbatchburnin
         BS=DEMCMCchain([gamma, eps],Nbatchburnin,Nchain,config.Transform,start,data,model);
-        start=BS.Samples(:,:,end)
-        BS.TrueSamples(:,:,end)
+        start=BS.Samples(:,:,end);
         [BoolConvergence, ConvergenceStat(t_burnin)]=TestConvergence(BS.TrueSamples,config.Convergence.Tol,config.Convergence.Diagnostic);
         if BoolConvergence
             if strcmp(Verbosity,'iter') || strcmp(Verbosity,'detail')

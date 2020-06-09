@@ -101,6 +101,15 @@ end
 if ~isfield(Input.FitOptions,'Method')
     Input.FitOptions.Method='MAP'; % set MAP as default
 end
+if ~isfield(Input.FitOptions,'RFXBMS')
+    Input.FitOptions.RFXBMS=1;
+end
+if ~isfield(Input.FitOptions,'Display')
+    Input.FitOptions.Display='iter';
+end
+if ~isfield(Input.FitOptions,'Nrepeat')
+    Input.Nrepeat=1;
+end
 if ~isfield(Input,'Criteria')
     if strcmp(Input.FitOptions.Method,'MAP')
         Q.Item='Criteria_MAP';

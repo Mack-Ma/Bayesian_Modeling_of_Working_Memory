@@ -8,7 +8,7 @@
 % ## Input ##
 % - Samples
 %   mat, contains posterior samples
-%   help BMW_MCMC for details
+%   help BMW_parMCMC for details
 %
 % - Model
 %   struct, configures the model
@@ -81,7 +81,7 @@ end
 % get IC
 switch Method.IC
     case 'DIC1' % get deviance information criterion
-        if Method.Verbosity==1;
+        if Method.Verbosity==2;
             fprintf('\nNow start estimating DIC... \n\n')
         end
         % get likelihood
@@ -95,11 +95,11 @@ switch Method.IC
         pD=MDev-DevM;
         % DIC1
         IC=MDev+pD;
-        if Method.Verbosity==1;
-            fprintf('Done!\n')
+        if Method.Verbosity==2;
+            fprintf('Done! DIC1=%d\n',IC)
         end
     case 'DIC2' % get deviance information criterion
-        if Method.Verbosity==1;
+        if Method.Verbosity==2;
             fprintf('\nNow start estimating DIC... \n\n')
         end
         % get likelihood
@@ -110,11 +110,11 @@ switch Method.IC
         pV=0.5*var(2*LLH);
         % DIC2
         IC=MDev+pV;
-        if Method.Verbosity==1;
-            fprintf('Done!\n')
+        if Method.Verbosity==2;
+            fprintf('Done! DIC2=%d\n',IC)
         end
     case 'DIC*' % the only difference between DIC & DIC* is that DIC* gives larger penalty to model complexity
-        if Method.Verbosity==1;
+        if Method.Verbosity==2;
             fprintf('\nNow start estimating DIC*... \n\n')
         end
         % get likelihood
@@ -128,11 +128,11 @@ switch Method.IC
         pD=MDev-DevM;
         % DIC*
         IC=MDev+2*pD;
-        if Method.Verbosity==1;
-            fprintf('Done!\n')
+        if Method.Verbosity==2;
+            fprintf('Done!, DIC*=%d\n', IC)
         end
     case 'WAIC1' % get watanabe-akaike information criterion
-        if Method.Verbosity==1;
+        if Method.Verbosity==2;
             fprintf('\nNow start estimating WAIC1... \n\n')
         end
         % get log pointwise predictive density
@@ -142,11 +142,11 @@ switch Method.IC
         p_waic1=-2*sum(log(mean(exp(lppd),1)))+2*sum(mean(lppd,1));
         % WAIC
         IC=elppd+p_waic1;
-        if Method.Verbosity==1;
-            fprintf('Done!\n')
+        if Method.Verbosity==2;
+            fprintf('Done! WAIC1=%d\n',IC)
         end
     case 'WAIC2' % get watanabe-akaike information criterion
-        if Method.Verbosity==1;
+        if Method.Verbosity==2;
             fprintf('\nNow start estimating WAIC2... \n\n')
         end
         % get log pointwise predictive density
@@ -156,11 +156,11 @@ switch Method.IC
         p_waic2=sum(var(lppd,1));
         % WAIC
         IC=elppd+p_waic2;
-        if Method.Verbosity==1;
-            fprintf('Done!\n')
+        if Method.Verbosity==2;
+            fprintf('Done! WAIC2=%d\n',IC)
         end
     case 'LME_HarmonicMean' % get log model evidence (marginal likelihood) through the generalized harmonic mean estimator
-        if Method.Verbosity==1;
+        if Method.Verbosity==2;
             fprintf('\nNow estimate marginal likelihood based on the generalized harmonic mean estimator... \n\n')
         end
         % Default method (given its convenience).
@@ -173,7 +173,7 @@ switch Method.IC
         SampleSD=std(RawSamples);
         IDMean=mean(RawSamples);
         IDCov0=SampleCov*(Nsample-1)/Nsample; % Unbiased estimator
-        IDCov=IDCov0+0.00001*mean(mean(IDCov0))*eye(Nparam); % To avoid the singularity problem
+        IDCov=IDCov0+0.0001*mean(mean(IDCov0))*eye(Nparam); % To avoid the singularity problem
 %         % skewness
 %         SampleMoment3rd=mean((RawSamples-repmat(mean(RawSamples),Nsample,1)).^3); % 3rd moment
 %         SampleSkewness=SampleMoment3rd./(SampleSD.^3); % standardize
@@ -188,7 +188,7 @@ switch Method.IC
                 LID(i)=log(mvnpdf(RawSamples(i,:),IDMean,IDCov)); % we use multivariate normal distribution
             end
             % scaling
-            LID=LID+log((mean(SampleKurtosis)/4).^0.25);
+            LID=LID+log((min(SampleKurtosis)/4).^0.25);
             % ID/posterior
             DR=LID-LP;
             mDR=median(DR); 
@@ -200,31 +200,31 @@ switch Method.IC
             DR(DR==Inf)=realmax('double')/Nsample;
             DR(DR==-Inf)=realmin('double');
             % the generalized harmonic mean estimator
-            IC=-(-log((mean(DR)))+mDR);
-            if Method.Verbosity==1
-                fprintf('Done!\n')
+            IC=-log((mean(DR)))+mDR;
+            if Method.Verbosity==2
+                fprintf('Done! LME(GHM)=%d\n',IC)
             end
 
     case 'LME_BridgeSampling' % get log model evidence (marginal likelihood) through bridge sampling
-        if Method.Verbosity==1;
+        if Method.Verbosity==2;
             fprintf('\nNow estimate marginal likelihood based on bridge sampling... \n\n')
         end
         % recommended method, takes time tho
         % use ML estimator to fit the proposal distribution (mvn)
-        if Method.Verbosity==1;
-            fprintf('Constructing the proposal function... \n')
+        if Method.Verbosity==2;
+            fprintf('\nConstructing the proposal function... \n')
         end
         % get the covariance matrix of the raw posterior samples
         SampleCov=cov(RawSamples);
         IDMean=mean(RawSamples);
         IDCov=SampleCov*(Nsample-1)/Nsample; % Unbiased estimator
-        IDCov=IDCov+0.00001*mean(mean(IDCov))*eye(Nparam); % To avoid the singularity problem
+        IDCov=IDCov+0.0001*mean(mean(IDCov))*eye(Nparam); % To avoid the singularity problem
         % Sampling based on the proposal distribution
         Nprop=Nsample/2;
         [PropSamples,PropID]=randmvn(Nprop,IDMean,IDCov);
-        if Method.Verbosity==1;
+        if Method.Verbosity==2;
             fprintf('Done!\n')
-            fprintf('Now start updating the estimated marginal likelihood value... \n')
+            fprintf('\nNow start updating the estimated marginal likelihood value... \n')
         end
         % get log posterior of the proposal samples
         % do transform
@@ -234,16 +234,20 @@ switch Method.IC
         if Method.Verbosity==1
             fprintf('\nBridge Sampling\n')
         end
-        if Method.Verbosity==1
+        if Method.Verbosity==2
             fprintf('\nNow start calculating posteriors for the proposal samples...\n')
         end
         for i=1:Nprop
             eval(['LPprop(i)=-',Model.Model,'(TruePropSamples(i,:), Data, Model);'])
             if mod(i,Nprop/10)==rem(Nprop,10) && i/(Nprop/10)>=1
-                fprintf('|||||')
+                if Method.Verbosity>=1
+                    fprintf('|||||')
+                end
             end
         end
-        fprintf('\nDone!\n')
+        if Method.Verbosity==2
+            fprintf('\nDone!\n')
+        end
         % get proposal density of the target samples
         TarID=mvnpdf(RawSamples,IDMean,IDCov);
         for i=1:length(RawSamples)
@@ -257,12 +261,12 @@ switch Method.IC
         LL2=LPprop-log(PropID);
         LLstar=median(LL1); % avoid reaching the computational limit, see https://osf.io/8x7m9/
         % use the optimal bridging function in Gronau et al, 2017
-        MaxT=1e8;
+        MaxT=1e6;
         ToleranceME=1e-10;
         ME0=1e-6; % initial guess
         s1=Nsample/(Nsample+Nprop);
         s2=Nprop/(Nsample+Nprop);
-        if Method.Verbosity==1
+        if Method.Verbosity==2
             fprintf('\nNow start iterations...\n')
         end
         for t=1:MaxT
@@ -282,26 +286,29 @@ switch Method.IC
             % check tolerance
             if abs(1-ME0/ME)<=ToleranceME
                 MEfinal=ME;
-                if Method.Verbosity==1
+                if Method.Verbosity>=1
                     fprintf('\nConverged!\n')
                 end
                 break;
             end
-            if Method.Verbosity==1
+            if Method.Verbosity==2
                 if rem(t,1e4)==0
                     T=floor(t/1e4);
-                    fprintf('\n%de5 iterations done. LME difference=%d\n',T,abs(1-ME0/ME))
+                    fprintf('\n%de4 iterations done. LME difference=%d\n',T,abs(1-ME0/ME))
                 end
             end
             ME0=ME;
         end
         if t==MaxT
-            if Method.Verbosity==1
+            if Method.Verbosity>=1
                 fprintf('\nReach max number of interation, marginal likelihood didn''t converge...\n')
             end
-            MEfinal=log(ME0)+LLstar;
+            MEfinal=-log(ME0)-LLstar;
         end
-        IC=log(MEfinal)+LLstar;
+        IC=-log(MEfinal)-LLstar;
+        if Method.Verbosity==2
+            fprintf('\nDone! LME(BS)=%d\n',IC)
+        end
 end
 
 end

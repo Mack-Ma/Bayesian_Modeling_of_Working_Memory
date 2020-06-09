@@ -1,6 +1,6 @@
 function varargout = BMW_Change_Settings(varargin)
 
-% Last Modified by GUIDE v2.5 01-May-2020 05:38:57
+% Last Modified by GUIDE v2.5 08-Jun-2020 00:15:54
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -163,18 +163,24 @@ function Variable_Precision_Callback(hObject, eventdata, handles)
 
 % --- Executes on button press in Variable_Precision_with_Capacity.
 function Variable_Precision_with_Capacity_Callback(hObject, eventdata, handles)
+% --- Executes on button press in ContinuousK.
 
-% --- Executes on button press in Categorical_Slots_plus_Averaging_BV.
-function Categorical_Slots_plus_Averaging_BV_Callback(hObject, eventdata, handles)
+% --- Executes on button press in Category_Only_with_Capacity.
+function Category_Only_with_Capacity_Callback(hObject, eventdata, handles)
 
-% --- Executes on button press in Categorical_Standard_Mixture_BV.
-function Categorical_Standard_Mixture_BV_Callback(hObject, eventdata, handles)
+function ContinuousK_Callback(hObject, eventdata, handles)
 
-% --- Executes on button press in Categorical_Variable_Precision_BV.
-function Categorical_Variable_Precision_BV_Callback(hObject, eventdata, handles)
+% --- Executes on button press in ResponseNoise.
+function ResponseNoise_Callback(hObject, eventdata, handles)
 
-% --- Executes on button press in Categorical_Variable_Precision_with_Capacity_BV.
-function Categorical_Variable_Precision_with_Capacity_BV_Callback(hObject, eventdata, handles)
+% --- Executes on button press in Category_WI.
+function Category_WI_Callback(hObject, eventdata, handles)
+
+% --- Executes on button press in Category_BI.
+function Category_BI_Callback(hObject, eventdata, handles)
+
+% --- Executes on button press in Category_Only.
+function Category_Only_Callback(hObject, eventdata, handles)
 
 % --- Executes on button press in Fixed_Capacity_Central_Probe.
 function Fixed_Capacity_Central_Probe_Callback(hObject, eventdata, handles)
@@ -306,11 +312,11 @@ close
 
 % --- Executes on button press in Defaults.
 function Defaults_Callback(hObject, eventdata, handles)
-BMW_Preferences.ModelSpace={'Standard Mixture','Variable Precision'};
+BMW_Preferences.ModelSpace={'Standard Mixture'};
 BMW_Preferences.Model.Variants={};
 BMW_Preferences.FitOptions.Method='MAP';
 BMW_Preferences.FitOptions.UniformPrior=0;
-BMW_Preferences.FitOptions.Repeat=5;
+BMW_Preferences.FitOptions.Repeat=1;
 BMW_Preferences.FitOptions.MCMCOptions.Transform='Probit';
 BMW_Preferences.FitOptions.Display='iter';
 BMW_Preferences.FitOptions.MCMCOptions.Convergence.Diagnostic='GR'; 
@@ -347,11 +353,9 @@ set(handles.Standard_Mixture,'Value',any(strcmp(BMW_Preferences.ModelSpace,'Stan
 set(handles.Slots_plus_Averaging,'Value',any(strcmp(BMW_Preferences.ModelSpace,'Slots-plus-Averaging')))
 set(handles.Equal_Precision,'Value',any(strcmp(BMW_Preferences.ModelSpace,'Equal Precision')))
 set(handles.Variable_Precision,'Value',any(strcmp(BMW_Preferences.ModelSpace,'Variable Precision')))
+set(handles.Category_Only,'Value',any(strcmp(BMW_Preferences.ModelSpace,'Category-Only')))
+set(handles.Category_Only_with_Capacity,'Value',any(strcmp(BMW_Preferences.ModelSpace,'Category-Only (with Capacity)')))
 set(handles.Variable_Precision_with_Capacity,'Value',any(strcmp(BMW_Preferences.ModelSpace,'Variable Precision with Capacity')))
-set(handles.Categorical_Standard_Mixture_BV,'Value',any(strcmp(BMW_Preferences.ModelSpace,'Categorical Standard Mixture (Between-Variant)')))
-set(handles.Categorical_Slots_plus_Averaging_BV,'Value',any(strcmp(BMW_Preferences.ModelSpace,'Categorical Slots-plus-Averaging (Between-Variant)')))
-set(handles.Categorical_Variable_Precision_BV,'Value',any(strcmp(BMW_Preferences.ModelSpace,'Categorical Variable Precision (Between-Variant)')))
-set(handles.Categorical_Variable_Precision_with_Capacity_BV,'Value',any(strcmp(BMW_Preferences.ModelSpace,'Categorical Variable Precision with Capacity (Between-Variant)')))
 set(handles.Fixed_Capacity_Central_Probe,'Value',any(strcmp(BMW_Preferences.ModelSpace,'Fixed Capacity (Central-Probe)')))
 set(handles.Fixed_Capacity_Single_Probe,'Value',any(strcmp(BMW_Preferences.ModelSpace,'Fixed Capacity (Single-Probe)')))
 set(handles.Fixed_Capacity_Full_Display,'Value',any(strcmp(BMW_Preferences.ModelSpace,'Fixed Capacity (Full-Display)')))
@@ -360,6 +364,10 @@ set(handles.Bias,'Value',any(strcmp(BMW_Preferences.Model.Variants,'Bias')))
 set(handles.BiasF,'Value',any(strcmp(BMW_Preferences.Model.Variants,'BiasF')))
 set(handles.PrecF,'Value',any(strcmp(BMW_Preferences.Model.Variants,'PrecF')))
 set(handles.Swap,'Value',any(strcmp(BMW_Preferences.Model.Variants,'Swap')))
+set(handles.ContinuousK,'Value',any(strcmp(BMW_Preferences.Model.Variants,'ContinuousK')))
+set(handles.ResponseNoise,'Value',any(strcmp(BMW_Preferences.Model.Variants,'ResponseNoise')))
+set(handles.Category_WI,'Value',any(strcmp(BMW_Preferences.Model.Variants,'Category (Within-Item)')))
+set(handles.Category_BI,'Value',any(strcmp(BMW_Preferences.Model.Variants,'Category (Between-Item)')))
 set(handles.Lapse,'Value',any(strcmp(BMW_Preferences.Model.Variants,'Lapse')))
 set(handles.Ensemble,'Value',any(strcmp(BMW_Preferences.Model.Variants,'Ensemble')))
 % mcmc options
@@ -517,10 +525,8 @@ if get(handles.Slots_plus_Averaging,'Value'), ModelSpace={ModelSpace,'Slots-plus
 if get(handles.Equal_Precision,'Value'), ModelSpace={ModelSpace,'Equal Precision'}; end
 if get(handles.Variable_Precision,'Value'), ModelSpace={ModelSpace,'Variable Precision'}; end
 if get(handles.Variable_Precision_with_Capacity,'Value'), ModelSpace={ModelSpace,'Variable Precision with Capacity'}; end
-if get(handles.Categorical_Standard_Mixture_BV,'Value'), ModelSpace={ModelSpace,'Categorical Standard Mixture (Between-Variant)'}; end
-if get(handles.Categorical_Slots_plus_Averaging_BV,'Value'), ModelSpace={ModelSpace,'Categorical Slots-plus-Averaging (Between-Variant)'}; end
-if get(handles.Categorical_Variable_Precision_BV,'Value'), ModelSpace={ModelSpace,'Categorical Variable Precision (Between-Variant)'}; end
-if get(handles.Categorical_Variable_Precision_with_Capacity_BV,'Value'), ModelSpace={ModelSpace,'Categorical Variable Precision with Capacity (Between-Variant)'}; end
+if get(handles.Category_Only,'Value'), ModelSpace={ModelSpace,'Category-Only'}; end
+if get(handles.Category_Only_with_Capacity,'Value'), ModelSpace={ModelSpace,'Category-Only (with Capacity)'}; end
 if get(handles.Fixed_Capacity_Central_Probe,'Value'), ModelSpace={ModelSpace,'Fixed Capacity (Central-Probe)'}; end
 if get(handles.Fixed_Capacity_Full_Display,'Value'), ModelSpace={ModelSpace,'Fixed Capacity (Full-Display)'}; end
 if get(handles.Fixed_Capacity_Single_Probe,'Value'), ModelSpace={ModelSpace,'Fixed Capacity (Single-Probe)'}; end
@@ -529,6 +535,10 @@ if get(handles.Bias,'Value'), ModelVariants={ModelVariants,'Bias'}; end
 if get(handles.BiasF, 'Value'), ModelVariants={ModelVariants, 'BiasF'}; end
 if get(handles.PrecF,'Value'), ModelVariants={ModelVariants,'PrecF'}; end
 if get(handles.Swap,'Value'), ModelVariants={ModelVariants,'Swap'}; end
+if get(handles.ContinuousK,'Value'), ModelVariants={ModelVariants,'ContinuousK'}; end
+if get(handles.ResponseNoise,'Value'), ModelVariants={ModelVariants,'ResponseNoise'}; end
+if get(handles.Category_WI,'Value'), ModelVariants={ModelVariants,'Category (Within-Item)'}; end
+if get(handles.Category_BI,'Value'), ModelVariants={ModelVariants,'Category (Between-Item)'}; end
 if get(handles.Lapse,'Value'), ModelVariants={ModelVariants,'Lapse'}; end
 if get(handles.Ensemble,'Value'), ModelVariants={ModelVariants,'Ensemble'}; end
 BMW_Preferences.Model.Variants=ModelVariants;

@@ -97,27 +97,38 @@ end
 % end
 
 % Configuration
-errors=Data.error;
 SS=Data.SS;
 SS_range=unique(SS);
+if ~any(strcmp(Input.Variants,'ContinuousK'))
+    K=floor(K); % Note that capacity is a fixed, discrete value here
+end
+samples=Data.sample;
+responses=Data.response;
 error_range=Data.error_range;
-K=floor(K); % Note that capacity is a fixed, discrete value here
 if length(error_range)==2
     continuous=1;
+    period=error_range(2)-error_range(1);
 else
     continuous=0;
+    period=max(error_range)-min(error_range)+(error_range(2)-error_range(1));
 end
+errors=CircDist_BMW('Diff',responses,samples,period);
 if any(strcmp(Input.Variants,'BiasF'))
-    sample_range=Data.sample_range;
-    samples=Data.sample;
+    if isfield(Data,'sample_range')
+        sample_range=Data.sample_range;
+    end
+    samples_cos=samples;
 else
-    samples=ones(1,length(errors));
+    samples_cos=ones(1,length(errors));
     sample_range=1;
 end
 if any(strcmp(Input.Variants,'Swap'))
-    errors_nt=Data.error_nt;
+    samples_nt=Data.sample_nt;
+    errors_nt=CircDist_BMW('Diff',repmat(responses,[1,size(samples_nt,2)]),samples_nt,period);
     if any(strcmp(Input.Variants,'BiasF'))
-        samples_nt=Data.sample_nt;
+        samples_nt_cos=samples_nt;
+    else
+        samples_nt_cos=ones(size(samples_nt,1),size(samples_nt,2));
     end
 end
 if strcmp(Input.Output,'LP') || strcmp(Input.Output,'Prior')  || strcmp(Input.Output,'All')
@@ -133,11 +144,11 @@ if ~strcmp(Input.Output,'Prior')
         p_error_NT=zeros(1,length(errors));
         for i_error=1:length(errors)
             N=SS(i_error);
-            error0=errors(i_error)+bias+biasF*cosd(samples(i_error)-90);
+            error0=errors(i_error)+bias+biasF*cosd(samples_cos(i_error)-90);
             if K<N % beyond capacity
-                p_error(i_error)=(1-K/N)*1/(error_range(2)-error_range(1))+(K/N)*exp(kappa_r.*cosd(error0))./(2*pi*besseli0_fast(kappa_r));
+                p_error(i_error)=(1-K/N)*1/(error_range(2)-error_range(1))+(K/N)*exp(kappa_r.*cosd(error0))./(2*pi*besseli(0,kappa_r));
             else % within capacity
-                p_error(i_error)=exp(kappa_r.*cosd(error0))./(2*pi*besseli0_fast(kappa_r));
+                p_error(i_error)=exp(kappa_r.*cosd(error0))./(2*pi*besseli(0,kappa_r));
             end
             
             if any(strcmp(Input.Variants,'Swap'))
@@ -146,11 +157,11 @@ if ~strcmp(Input.Output,'Prior')
                 else
                     p_temp_NT=0;
                     for i_nt=1:N-1
-                        error0_nt=errors_nt(i_nt, i_error)+bias+biasF*cosd(samples(i_error)-90); % Errors with bias
+                        error0_nt=errors_nt(i_error,i_nt)+bias+biasF*cosd(samples_nt_cos(i_error,i_nt)-90); % Errors with bias
                         if K<N % beyond capacity
-                            p_temp_NT=p_temp_NT+(1-K/N)*1/(error_range(2)-error_range(1))+(K/N)*exp(kappa_r.*cosd(error0_nt))./(2*pi*besseli0_fast(kappa_r));
+                            p_temp_NT=p_temp_NT+(1-K/N)*1/(error_range(2)-error_range(1))+(K/N)*exp(kappa_r.*cosd(error0_nt))./(2*pi*besseli(0,kappa_r));
                         else % within capacity
-                            p_error(i_error)=exp(kappa_r.*cosd(error0_nt))./(2*pi*besseli0_fast(kappa_r));
+                            p_error(i_error)=exp(kappa_r.*cosd(error0_nt))./(2*pi*besseli(0,kappa_r));
                         end
                     end
                     p_error_NT(i_error)=p_temp_NT/(N-1);
@@ -169,7 +180,7 @@ if ~strcmp(Input.Output,'Prior')
                 for i_error=1:length(error_range)
                     error0=error_range(i_error)+bias_cur;
                     p_error(i_N,i_error,:)=(1-K/N)*1/length(error_range)+...
-                        (K/N)*exp(kappa_r.*cosd(error0))./(2*pi*besseli0_fast(kappa_r));
+                        (K/N)*exp(kappa_r.*cosd(error0))./(2*pi*besseli(0,kappa_r));
                 end
                 % Normalization
                 for i_sample=1:length(sample_range)
@@ -178,7 +189,7 @@ if ~strcmp(Input.Output,'Prior')
             else % under capacity (K>=N)
                 for i_error=1:length(error_range)
                     error0=error_range(i_error)+bias_cur;
-                    p_error(i_N,i_error,:)=exp(kappa_r.*cosd(error0))./(2*pi*besseli0_fast(kappa_r));
+                    p_error(i_N,i_error,:)=exp(kappa_r.*cosd(error0))./(2*pi*besseli(0,kappa_r));
                 end
                 % Normalization
                 for i_sample=1:length(sample_range)
@@ -192,7 +203,7 @@ if ~strcmp(Input.Output,'Prior')
         p_NT=zeros(1,length(errors));
         for i=1:length(errors)
             if any(strcmp(Input.Variants,'BiasF'))
-                p_T(i)=(1-s)*p_error(SS_range==SS(i),error_range==errors(i), sample_range==samples(i));
+                p_T(i)=(1-s)*p_error(SS_range==SS(i),error_range==errors(i), sample_range==samples_cos(i));
             else
                 p_T(i)=(1-s)*p_error(SS_range==SS(i),error_range==errors(i), 1);
             end
@@ -204,9 +215,9 @@ if ~strcmp(Input.Output,'Prior')
                 else
                     for j=1:SS(i)-1
                         if any(strcmp(Input.Variants,'BiasF'))
-                            p_NT(i)=p_NT(i)+s/(SS(i)-1)*p_error(SS_range==SS(i),error_range==errors_nt(j,i), sample_range==samples_nt(j,i));
+                            p_NT(i)=p_NT(i)+s/(SS(i)-1)*p_error(SS_range==SS(i),error_range==errors_nt(i,j), sample_range==samples_nt_cos(i,j));
                         else
-                            p_NT(i)=p_NT(i)+s/(SS(i)-1)*p_error(SS_range==SS(i),error_range==errors_nt(j,i), 1);
+                            p_NT(i)=p_NT(i)+s/(SS(i)-1)*p_error(SS_range==SS(i),error_range==errors_nt(i,j), 1);
                         end
                     end
                 end
@@ -220,10 +231,6 @@ if ~strcmp(Input.Output,'Prior')
         LLH=p_error; % PDF
     else
         LLH=-sum(log(p_LH)); % Negative LLH
-    end
-    
-    if K>max(SS) % K cannot be larger than the set size
-        LLH=realmax('double');
     end
     
     % Posterior
