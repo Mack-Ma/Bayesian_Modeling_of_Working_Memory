@@ -26,12 +26,9 @@ Given the fast evolution of working memory computational models and the methodol
 		- Equal Precision
 		- Variable Precision
 		- Variable Precision with Capacity
-		- Categorical Standard Mixture   
-		(Categorical encoding will appear as a model variant in the future release)
-		- Categorical Slots-plus-Averaging
-		- Categorical Variable Precision
-		- Categorical Variable Precision with Capacity
-		- Model Variants: Bias/Swap/Bias Fluctuation/Precision Fluctuation
+		- Category-Only
+		- Category-Only (with Capacity)
+		- Model Variants: Continuous Capacity/ResponseNoise/Bias/Swap/Bias Fluctuation/Precision Fluctuation/Categorical Encoding (Between-Item)/Categorical Encoding (Within-Item)
 	- Change Detection Models
 		- Fixed-Capacity (Single-Probe)  
 		- Fixed-Capacity (Center-Probe)
@@ -39,7 +36,7 @@ Given the fast evolution of working memory computational models and the methodol
 		- Signal Detection
 		- Model Variants: Lapse/Ensemble Encoding
 	- Custom Models
-		- Instance Model for Category Learning
+		- The RW Reinforcement Model
 		- Von Mises Distribution
 - Available Built-In Optimization Algorithms  
 	- Default: Differential Evolution Monte Carlo Markov Chain (DE-MCMC)  
@@ -56,9 +53,9 @@ Given the fast evolution of working memory computational models and the methodol
   - _**Mesh Adaptive Direct Search (MADS)**_, Global Optimization Toolbox (built-in toolbox in Matlab >= 7.0)
   - _**Bayesian Adaptive Direct Search (BADS)**_, BADS Toolbox (http://github.com/lacerbi/bads)
 
-### Contributors  
-**Programmed** by Ma, Tianye  
-**Mentored** by Yixuan Dr. Ku (Sun Yat-Sen University)  
+### History
+**3/24/2020**, First full edition | Ma, Tianye & Dr. Ku, Yixuan  
+**6/8/2020**, Add categorical encoding strategies as model variants | Ma, Tianye & Dr. Ku, Yixuan  
 **Sincere thanks** to  
 Sizhu Han,  
 Ruyuan Dr. Zhang,  
