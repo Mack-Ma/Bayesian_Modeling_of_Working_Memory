@@ -1,9 +1,9 @@
 %% Second-Level Bayesian Model Comparison
 %
 % 2nd-level hierachical model describing the probability of "choosing" a certain model
-% based on the model evidence for each model and each subject.
+% based on the model evidence of all models based on the data of all subjects.
 % -----------------------
-% Output=BMW_BMC(LME,Config)
+% Output=BMW_BMS(LME,Config)
 %
 % ## Input ##
 % - LME
@@ -79,7 +79,7 @@ end
 
 % Calculate parameters
 output.a=a; % Dirichlet parameters
-output.r=a/sum(a); % (Expected) Model frequency
+output.r=a'/sum(a); % (Expected) Model frequency
 if Rec==1, output.RecIter=RecIter; end
 % Exceedance Probability
 EP=zeros(Nmodel,1);
@@ -87,7 +87,7 @@ for i=1:Nmodel
     EP(i)=integral(@(x)EPpdf(x,a(i),a(1:Nmodel~=i)),0,a(i))+...
         integral(@(x)EPpdf(x,a(i),a(1:Nmodel~=i)),a(i),Inf); % Integral of the posterior
 end
-output.EP=EP; % EP output
+output.EP=EP'/sum(EP); % EP output
 
 end
 

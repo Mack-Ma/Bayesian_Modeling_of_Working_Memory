@@ -4,7 +4,7 @@
 ![](https://github.com/Mack-Ma/Bayesian_Modeling_of_Working_Memory/blob/master/BMW_icon.png)
 
 ### Prologue
-Given the fast evolution of working memory computational models and the methodology of modeling these years, a new toolbox that could estimate, assess and comprehensively compare the new models using the state-of-the-art methods should be fruitful. Bayesian Modeling of Working Memory (BMW) toolbox is working on this issue by establishing a pipeline that integrates model definition, model estimation, model comparison & selection. All users could either finish all the job by GUI or by recruiting sample scripts.
+Given the fast evolution of working memory computational models and the methodology of modeling these years, a new toolbox that could estimate, assess and comprehensively compare the new models using the state-of-the-art methods should be helpful for the future studies. The Bayesian Modeling of Working Memory (BMW) toolbox is working on this issue by establishing a pipeline that integrates functions of model definition, model estimation, model comparison & selection. All users could either finish all the job by GUI or by recruiting Matlab scripts.
 
 ### Pipeline
 
@@ -18,6 +18,8 @@ Given the fast evolution of working memory computational models and the methodol
 	- Watanabe-Akaike Information Criterion (WAIC1/WAIC2)  
 	- Log Model Evidence/Marginal Likelihood (LME)
 	- Second-Level Random-Effect Bayesian Model Selection (RFX-BMS)
+		- Expected Model Frequency
+		- Exceedance Probability
 - Available Models 
 	- Continuous Recall Models
 		- Item Limit
@@ -28,13 +30,13 @@ Given the fast evolution of working memory computational models and the methodol
 		- Variable Precision with Capacity
 		- Category-Only
 		- Category-Only (with Capacity)
-		- Model Variants: Continuous Capacity/ResponseNoise/Bias/Swap/Bias Fluctuation/Precision Fluctuation/Categorical Encoding (Between-Item)/Categorical Encoding (Within-Item)
+		- Model Variants: + Continuous Capacity/ResponseNoise/Bias/Swap/Bias Fluctuation/Precision Fluctuation/Categorical Encoding (Between-Item)/Categorical Encoding (Within-Item)
 	- Change Detection Models
 		- Fixed-Capacity (Single-Probe)  
 		- Fixed-Capacity (Center-Probe)
 		- Fixed-Capacity (Whole-Display)
 		- Signal Detection
-		- Model Variants: Lapse/Ensemble Encoding
+		- Model Variants: + Lapse/Ensemble Encoding
 	- Custom Models
 		- The RW Reinforcement Model
 		- Von Mises Distribution
@@ -46,7 +48,7 @@ Given the fast evolution of working memory computational models and the methodol
 ### Requirements
 
 - Matlab (Best if >= 9.0/2016a, not sure if the lower version works)
-- Other Optimization Algorithms
+- Other Optimization Algorithms (Optional)
   - _**fmincon**_ (sqp/interior point/active set), Optimization Toolbox (built-in toolbox in Matlab >= 9.0)
   - _**Genetic Algorithm**_, Global Optimization Toolbox (built-in toolbox in Matlab >= 7.0)
   - _**Simulated Annealing**_, Global Optimization Toolbox (built-in toolbox in Matlab >= 7.0)
@@ -55,7 +57,7 @@ Given the fast evolution of working memory computational models and the methodol
 
 ### History
 **3/24/2020**, First full edition | Ma, Tianye & Dr. Ku, Yixuan  
-**6/8/2020**, Add categorical encoding strategies as model variants | Ma, Tianye & Dr. Ku, Yixuan  
+**6/8/2020**, Add categorical encoding strategies as model factors | Ma, Tianye & Dr. Ku, Yixuan  
 **Sincere thanks** to  
 Sizhu Han,  
 Ruyuan Dr. Zhang,  

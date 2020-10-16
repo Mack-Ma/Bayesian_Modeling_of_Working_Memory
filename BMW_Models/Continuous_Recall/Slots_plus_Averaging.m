@@ -309,6 +309,10 @@ else
         % Posterior
         LP=-log(Prior)+LLH; % likelihood*prior
         
+        if LP==Inf || isnan(LP)
+            LP=realmax('double'); % Output should be a real value
+        end
+        
     end
     
     % Decide output
@@ -327,9 +331,6 @@ else
         Output.LPPD=log(p_LH);
     end
     
-    if ~isstruct(Output) && (any(abs(Output))==Inf || any(isnan(Output)))
-        Output=realmax('double'); % Output should be a real value
-    end
 end
 
 end

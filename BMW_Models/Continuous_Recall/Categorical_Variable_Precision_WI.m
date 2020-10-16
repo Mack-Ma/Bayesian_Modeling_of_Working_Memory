@@ -1,4 +1,4 @@
-%% Categorical Slots-plus-Averaging (Within-Variant)
+%% Categorical Slots-plus-Averaging (Within-Item)
 %
 % Define the Categorical Slots-plus-Averaging (Within-Item) model
 % ------------
@@ -69,6 +69,9 @@ tau=param(2); % Resource allocation variability
 Nparam=2;
 SS=Data.SS;
 SS_range=unique(SS);
+if ~isfield(Input,'Variants') % No Variants
+    Input.Variants={};
+end
 if length(SS_range)~=1
     Nparam=Nparam+1;
     power=param(Nparam); % Resource decay rate
@@ -76,10 +79,12 @@ else
     power=0;
 end
 kappa_c=param(Nparam+1); % Precision of categorical memory
-eps_c=param(Nparam+2); % Scaling the weight of categorical memory
-Nparam=Nparam+2;
-if ~isfield(Input,'Variants') % No Variants
-    Input.Variants={};
+if any(strcmp(Input.Variants,'VariableCatWeight'))
+    gamma_c=param(Nparam+2:Nparam+1+length(SS_range)); % Scaling the weight of categorical memory
+    Nparam=Nparam+1+length(SS_range);
+else
+    gamma_c=param(Nparam+2); % Scaling the weight of categorical memory
+    Nparam=Nparam+2;
 end
 if any(strcmp(Input.Variants,'ResponseNoise'))
     Nparam=Nparam+1;
@@ -122,7 +127,7 @@ end
 kappa_max=700;
 SampleSeed=2000;
 if strcmp(Input.Output,'LP') || strcmp(Input.Output,'Prior') || strcmp(Input.Output,'All')
-    Prior=prior(param, Input); % get prior
+    Prior=prior(param, Data, Input); % get prior
 elseif strcmp(Input.Output,'LLH') || strcmp(Input.Output,'LPPD')
     Prior=1; % uniform prior
 end
@@ -168,6 +173,11 @@ if ~strcmp(Input.Output,'Prior')
     nc=zeros(length(SS_range),length(sample_range));
     period_sample=sample_range(end)+sample_range(2)-2*sample_range(1);
     for i_N=1:length(SS_range)
+        if any(strcmp(Input.Variants,'VariableCatWeight'))
+            gamma_cc=gamma_c(i_N);
+        else
+            gamma_cc=gamma_c;
+        end
         for i_s=1:length(sample_range)
             S=sample_range(i_s);
             % find the current category
@@ -177,7 +187,7 @@ if ~strcmp(Input.Output,'Prior')
             e_c=CircDist_BMW('Diff',response_range,ones(size(response_range))*C,period_sample); % categorical error
             s_ind=interp1(error_range,1:length(error_range),e_s);
             c_ind=interp1(error_range,1:length(error_range),e_c);
-            nc(i_N,i_s)=sum(p_error(i_N,s_ind).*(p_error_c(i_N,c_ind)).^eps_c);
+            nc(i_N,i_s)=sum(p_error(i_N,s_ind).*(p_error_c(i_N,c_ind)).^gamma_cc);
         end
     end
     
@@ -185,16 +195,26 @@ if ~strcmp(Input.Output,'Prior')
     p_T=zeros(1,length(errors));
     p_NT=zeros(1,length(errors));
     for i=1:length(errors)
-        p_T(i)=(1-s)*p_error(SS_range==SS(i),error_range==errors(i))*(p_error_c(SS_range==SS(i),error_range==errors_c(i))).^eps_c/...
+        if any(strcmp(Input.Variants,'VariableCatWeight'))
+            gamma_cc=gamma_c(SS_range==SS(i));
+        else
+            gamma_cc=gamma_c;
+        end
+        p_T(i)=(1-s)*p_error(SS_range==SS(i),error_range==errors(i))*(p_error_c(SS_range==SS(i),error_range==errors_c(i))).^gamma_cc/...
             nc(SS_range==SS(i),sample_range==samples(i));
     end
     if any(strcmp(Input.Variants,'Swap'))
         for i=1:length(errors_nt)
+            if any(strcmp(Input.Variants,'VariableCatWeight'))
+                gamma_cc=gamma_c(SS_range==SS(i));
+            else
+                gamma_cc=gamma_c;
+            end
             if SS(i)==1
                 p_NT(i)=0;
             else
                 for j=1:SS(i)-1
-                    p_NT(i)=p_NT(i)+s/(SS(i)-1)*p_error(SS_range==SS(i),error_range==errors_nt(i,j)).*(p_error_c(SS_range==SS(i),error_range==errors_nt_c(i,j))).^eps_c./nc(SS_range==SS(i),sample_range==samples_nt(i,j));
+                    p_NT(i)=p_NT(i)+s/(SS(i)-1)*p_error(SS_range==SS(i),error_range==errors_nt(i,j)).*(p_error_c(SS_range==SS(i),error_range==errors_nt_c(i,j))).^gamma_cc./nc(SS_range==SS(i),sample_range==samples_nt(i,j));
                 end
             end
         end
@@ -236,7 +256,7 @@ end
 end
 
 % Define prior
-function p=prior(param, Input)
+function p=prior(param, Data, Input)
 
 % Specify parameters
 kappa1_bar=param(1); % Unit resource
@@ -247,6 +267,11 @@ tau=param(2); % Resource allocation variability
 % Note that here we simplified the theoretical conjugate prior of
 % gamma distribution for convenience
 p0(2)=2.^(-0.05*tau)./tau.^(-2)/48040; % normalized
+SS=Data.SS;
+SS_range=unique(SS);
+if ~isfield(Input,'Variants') % No Variants
+    Input.Variants={};
+end
 % check power
 if length(SS_range)~=1
     Nparam=3;
@@ -256,15 +281,22 @@ if length(SS_range)~=1
 else
     Nparam=2;
 end
-kappa_c=param(Nparam+1); % categorical memory precision
-% Gamma prior for categorical memory precision
-p0(Nparam+1)=gampdf(kappa_c,3,5);
-eps_c=param(Nparam+2); % categorical weight
-% Gamma prior for the weight of categorical memory
-p0(Nparam+2)=gampdf(eps_c, 2, 2);
-Nparam=Nparam+2;
-if ~isfield(Input,'Variants') % No Variants
-    Input.Variants={};
+if any(strcmp(Input.Variants,'VariableCatWeight'))
+    kappa_c=param(Nparam+1); % categorical memory precision
+    % Gamma prior for categorical memory precision
+    p0(Nparam+1)=gampdf(kappa_c,3,5);
+    gamma_c=param(Nparam+2:Nparam+1+length(SS_range)); % categorical weight
+    % Gamma prior for the weight of categorical memory
+    p0(Nparam+2:Nparam+1+length(SS_range))=gampdf(gamma_c, 2, 2);
+    Nparam=Nparam+1+length(SS_range);
+else
+    kappa_c=param(Nparam+1); % categorical memory precision
+    % Gamma prior for categorical memory precision
+    p0(Nparam+1)=gampdf(kappa_c,3,5);
+    gamma_c=param(Nparam+2); % categorical weight
+    % Gamma prior for the weight of categorical memory
+    p0(Nparam+2)=gampdf(gamma_c, 2, 2);
+    Nparam=Nparam+2;
 end
 if any(strcmp(Input.Variants,'ResponseNoise'))
     Nparam=Nparam+1;

@@ -296,8 +296,7 @@ end
 
 % Construct joint distribution
 % Consider independent parameters here
-% We think it's generally acceptable for prior definition,
-% tho it's usually not the actual case
+% We think it's generally acceptable for prior definition
 p=1;
 for i=1:Nparam
     p=p*p0(i);

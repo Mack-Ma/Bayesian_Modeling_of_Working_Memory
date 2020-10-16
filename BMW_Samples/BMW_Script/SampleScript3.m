@@ -6,9 +6,8 @@
 % For detailed instruction of this script, please refer to the manual (type BMW('Manual')).
 % ------------
 % Programmed by Ma, Tianye
-% Under the instruction of Dr. Ku, Yixuan
 % Memory, Attention & Cognition (MAC) Lab,
-% East China Normal University
+% Sun Yat-Sen University
 % 1/25/2020
 %
 % Bug reports or any other feedbacks please contact M.T. (mack_ma2018@outlook.com)
@@ -21,21 +20,25 @@ clear variables
 % load toolbox
 BMW('AddPath');
 % Designate models based on which to simulate
-SimModelSpace={'Slots-plus-Averaging','Variable Precision','Categorical Slots-plus-Averaging (Between-Variant)','Categorical Variable Precision (Between-Variant)',...
-    'Categorical Slots-plus-Averaging (Within-Variant)','Categorical Variable Precision (Within-Variant)'}; 
-Nsim=length(SimModelSpace);
+SimModelSpace={'Slots-plus-Averaging','Variable Precision'};
+SimVariantSpace={{'ContinuousK'},{'ContinuousK','Category (Between-Item)'}, {'ContinuousK','Category (Within-Item)'}};
+Nsim_models=length(SimModelSpace);
+Nsim_variants=length(SimVariantSpace);
+Nsim=Nsim_models*Nsim_variants;
 % Designate models to fit
-FitModelSpace={'Slots-plus-Averaging','Variable Precision','Categorical Slots-plus-Averaging (Between-Variant)','Categorical Variable Precision (Between-Variant)',...
-    'Categorical Slots-plus-Averaging (Within-Variant)','Categorical Variable Precision (Within-Variant)'}; 
-Nfit=length(FitModelSpace);
+FitModelSpace={'Slots-plus-Averaging','Variable Precision'};
+FitVariantSpace={{'ContinuousK'},{'ContinuousK', 'Category (Between-Item)'}, {'ContinuousK','Category (Within-Item)'}};
+Nfit_models=length(FitModelSpace);
+Nfit_variants=length(FitVariantSpace);
+Nfit=Nfit_models*Nfit_variants;
 % Configuration
-Nset=80; % # of datasets per model
-Ntrial=3000; % # of trials per dataset
+Nset=32; % # of datasets per model
+Ntrial=1000; % # of trials per dataset
 % Set parameters
 load('SimParam_BMW.mat')
 Param_Sim=cell(1,Nsim);
-for i=1:Nsim
-    par=SimParam_BMW{i};
+for i=1:Nfit
+    par=SimParam{i};
     Param_Sim{i}=repmat(par,ceil(Nset/size(par,1)),1);
 end
 
@@ -43,59 +46,76 @@ end
 fprintf('\nNow start simulation...\n')
 Dataset=cell(Nsim,Nset);
 SimParamRec=cell(Nsim,Nset);
-for sim_ind=1:Nsim
-    % Configurations
-    SS_range=[1 2 4 6];
-    Data.sample_range=1:180;
-    Data.response_range=1:180;
-    Data.category_range=[90 180];
-    Data.error_range=-90:89;
-    for set=1:Nset
-        % Generate samples
-        samples_ss1=randsample(Data.sample_range,30*length(Data.response_range))';
-        % Get categories
-        cat_diff=abs(CircDist_BMW('Diff',repmat(Data.category_range,[length(samples_ss1),1]),repmat(samples_ss1,[1,length(Data.category_range)])));
-        [~,cat_ind]=min(cat_diff,[],2);
-        categories_ss1=Data.category_range(cat_ind)';
-        samples=repmat(samples_ss1,length(SS_range),1);
-        categories=repmat(categories_ss1,length(SS_range),1);
-        responses=repmat(repmat(Data.response_range',30,1),length(SS_range),1);
-        Data.SS=reshape(repmat(SS_range,30*length(Data.response_range),1),[length(SS_range)*30*length(Data.response_range),1]);
-        Input.Output='LPPD'; % use log pointwise predictive density
-        FunctionName=MN_Convert_BMW(SimModelSpace{sim_ind}); % Convert model names to function names
-        ModelStruct.Model=SimModelSpace{sim_ind};
-        % ModelStruct.Variants={'Swap'}; % Set model variants
-        SimInfo=Info_BMW(ModelStruct,Data); % Get default settings
-        Param_Model=Param_Sim{sim_ind};
-        data_temp.error=zeros(Ntrial,1);
-        SimParam=Param_Model(set,:);
-        % Generate categorical errors
-        Data.error_c=randsample(error_c_range,length(errors),true);
-        % Generate pdf
-        eval(['PDF=',FunctionName,'(SimParam,Data,Input);']) % SS-by-error
-        PDF=exp(PDF);
-        PDF=reshape(PDF,[length(Data.error_range),length(SS_range)])';
-        PDF=PDF./repmat(sum(PDF,2),1,size(PDF,2)); % to ensure that PDF is a valid prob. density function
-        freq_temp=mnrnd(ceil(Ntrial/length(SS_range)),PDF); % Sampling based on the multinominal distribution
-        % Construct data based on the frequency
-        data_temp.SS=reshape(repmat(SS_range,ceil(Ntrial/length(SS_range)),1),[Ntrial,1]);
-        data_temp.error_range=Data.error_range;
-        data_temp.error_c=Data.error_c;
-        for ss=1:length(SS_range)
-            error_temp=zeros(ceil(Ntrial/length(SS_range)),1);
-            flag_err=1;
-            for err=1:length(Data.error_range)
-                if freq_temp(ss,err)~=0
-                    error_temp(flag_err:flag_err+freq_temp(ss,err)-1)=Data.error_range(err)*ones(freq_temp(ss,err),1);
-                    flag_err=flag_err+freq_temp(ss,err);
-                end
+sim_ind=0;
+for var_ind=1:Nsim_variants
+    for model_ind=1:Nsim_models
+        sim_ind=sim_ind+1;
+        % Configurations
+        SS_range=[1 2 4 6];
+        Data.sample_range=1:180;
+        Data.response_range=1:180;
+        Data.category_range=[90 180];
+        Data.error_range=-90:89;
+        for set=1:Nset
+            % Get pdf
+            PDF=zeros(length(SS_range),length(Data.response_range),length(Data.sample_range));
+            for s=1:length(Data.sample_range)
+                Data.sample=Data.sample_range(s)*ones(length(Data.response_range)*length(SS_range),1);
+                % Find the category
+                cat_diff0=abs(CircDist_BMW('Diff',repmat(Data.category_range,[length(Data.sample),1]),repmat(Data.sample,[1,length(Data.category_range)])));
+                [~,cat_ind0]=min(cat_diff0,[],2);
+                Data.category=Data.category_range(cat_ind0)';
+                Data.response=repmat(Data.response_range',length(SS_range),1);
+                Data.SS=reshape(repmat(SS_range,length(Data.response_range),1),length(Data.response_range)*length(SS_range),1);
+                Input.Output='LPPD'; % use log pointwise predictive density
+                FunctionName=MN_Convert_BMW(SimModelSpace{model_ind}); % Convert model names to function names
+                ModelFunc=str2func(FunctionName);
+                Input.Variants=SimVariantSpace{var_ind}; % Set model variants
+                Param_Model=Param_Sim{sim_ind};
+                Sim_Param=Param_Model(set,:);
+                PDF0=exp(ModelFunc(Sim_Param,Data,Input));
+                PDF0=reshape(PDF0,[length(Data.error_range),length(SS_range)])';
+                PDF0=PDF0./repmat(sum(PDF0,2),1,size(PDF0,2)); % to ensure that PDF is a valid prob. density function
+                PDF(:,:,s)=PDF0;
             end
-            error_temp;
-            data_temp.error(1+(ss-1)*ceil(Ntrial/length(SS_range)):ss*ceil(Ntrial/length(SS_range)))=error_temp;
+            % Simulation
+            % Generate samples
+            samples=randsample(Data.sample_range,Ntrial,true)';
+            % Get categories
+            cat_diff=abs(CircDist_BMW('Diff',repmat(Data.category_range,[length(samples),1]),repmat(samples,[1,length(Data.category_range)])));
+            [~,cat_ind]=min(cat_diff,[],2);
+            categories=Data.category_range(cat_ind)';
+            % Construct data based on the frequency
+            data_temp.sample=samples;
+            data_temp.category=categories;
+            data_temp.SS=reshape(repmat(SS_range,ceil(Ntrial/length(SS_range)),1),[Ntrial,1]);
+            data_temp.error_range=Data.error_range;
+            data_temp.sample_range=Data.sample_range;
+            data_temp.response_range=Data.response_range;
+            data_temp.category_range=Data.category_range;
+            data_temp.response=zeros(Ntrial,1);
+            for trial=1:ceil(Ntrial)
+                s=samples(trial);
+                ss=SS_range==data_temp.SS(trial);
+                response_temp=zeros(ceil(Ntrial/length(SS_range)),1);
+                    PDF_now=PDF(ss,:,Data.sample_range==s);
+                    freq_temp=mnrnd(1,PDF_now); % Sampling based on the multinominal distribution
+                    data_temp.response(trial)=Data.response_range(freq_temp==1);
+            end
+            if isempty(cell2mat(SimVariantSpace{var_ind}))
+                Variants_Display='None';
+            else
+                Variants_Now=SimVariantSpace{var_ind};
+                Variants_Display=cell(1,length(Variants_Now));
+                for i=1:length(Variants_Now)
+                    Variants_Display{i}=[Variants_Now{i},' '];
+                end
+                Variants_Display=cell2mat(Variants_Display);
+            end
+            fprintf('\nModel: %s, Variants: %s, Dataset: %d\n',SimModelSpace{model_ind},Variants_Display,set) % Progress
+            Dataset{sim_ind,set}=data_temp;
+            SimParamRec{sim_ind,set}=Sim_Param;
         end
-        fprintf('\nModel: %s, Dataset: %d\n',SimModelSpace{sim_ind},set) % Progress
-        Dataset{sim_ind,set}=data_temp;
-        SimParamRec{sim_ind,set}=SimParam;
     end
 end
 
@@ -103,28 +123,42 @@ end
 fprintf('\nNow start model fitting...\n')
 FitResult=cell(Nfit,Nsim);
 for sim_ind=1:Nsim
-    for fit_ind=1:Nfit
-        fprintf('\n%s\n',FitModelSpace{fit_ind})
-        Config_MA.Data=Dataset(sim_ind,:);
-        % Specify model
-        Config_MA.Model.Model=FitModelSpace{fit_ind};
-        % Set Variants (Optional)
-%         Config_MA.Model.Variants={'Bias'};
-        % Model definition
-        Config_MA.Criteria={'DIC1','DIC2','DIC*','WAIC1','WAIC2','LME_GHM','LME_BS'};
-        %     Config_MA.FitOptions.Algorithm='SA'; % Change optimization algorithm (Default: 'GA')
-        % Configuration
-        MA=Configuration_BMW(Config_MA);
-        % Estimation
-        MA=ModelFit_BMW(MA);
-        FitResult{fit_ind,sim_ind}=MA;
+    fit_ind=0;
+    Config_MA.Data=Dataset(sim_ind,:);
+    for var_ind=1:Nfit_variants
+        for model_ind=1:Nfit_models
+            fit_ind=fit_ind+1;
+            if isempty(cell2mat(FitVariantSpace{var_ind}))
+                Variants_Display='None';
+            else
+                Variants_Now=FitVariantSpace{var_ind};
+                Variants_Display=cell(1,length(Variants_Now));
+                for i=1:length(Variants_Now)
+                    Variants_Display{i}=[Variants_Now{i},' '];
+                end
+                Variants_Display=cell2mat(Variants_Display);
+            end
+            fprintf('\nModel: %s, Variants: %s\n',FitModelSpace{model_ind},Variants_Display) % Progress
+            % Specify model
+            Config_MA.Model.Model=FitModelSpace{model_ind};
+            % Specify Variants
+            Config_MA.Model.Variants=FitVariantSpace{var_ind};
+            % Specify the criteria of interest
+            Config_MA.Criteria={'DIC1','DIC2','DIC*','WAIC1','WAIC2'};
+            %     Config_MA.FitOptions.Algorithm='GA'; % Change the optimization algorithm (Default: 'DE-MCMC')
+            % Configuration
+            MA=Configuration_BMW(Config_MA);
+            % Estimation
+            MA=ModelFit_BMW(MA);
+            FitResult{sim_ind,fit_ind}=MA;
+        end
     end
 end
 
 %% Model Comparison
-CompareResult=cell(Nsim,Nfit);
+CompareResult=cell(Nsim,1);
 for sim_ind=1:Nsim
-    CompareResult(sim_ind,:)=ModelComparison_BMW(FitResult(:,sim_ind));
+    CompareResult(sim_ind)=ModelComparison_BMW(FitResult(sim_ind,:));
 end
 
 %% Epilogue

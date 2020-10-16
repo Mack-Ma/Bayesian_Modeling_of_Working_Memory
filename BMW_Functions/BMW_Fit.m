@@ -126,7 +126,7 @@ elseif strcmp(FitOptions.Algorithm,'DE-MCMC')
         Config_MCMC.Algorithm='DE';
         [MCMCResult,OptResult]=BMW_parMCMC(Model_MCMC, Data, Config_MCMC);
         Param_BMW=OptResult.FitParam;
-        LP_BMW=log(OptResult.MAXposterior);
+        LP_BMW=OptResult.BestPosterior;
         Quality.MCMCResult=MCMCResult;
 elseif strcmp(FitOptions.Algorithm,'MH-MCMC')
         %% MH-MCMC
@@ -155,7 +155,7 @@ elseif strcmp(FitOptions.Algorithm,'MH-MCMC')
         Config_MCMC.Algorithm='MH';
         [MCMCResult,OptResult]=BMW_parMCMC(Model_MCMC, Data, Config_MCMC);
         Param_BMW=OptResult.FitParam;
-        LP_BMW=log(OptResult.MAXposterior);
+        LP_BMW=OptResult.BestPosterior;
         Quality.MCMCResult=MCMCResult;
 end
 

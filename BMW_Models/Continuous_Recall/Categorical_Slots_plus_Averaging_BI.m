@@ -66,11 +66,18 @@ function Output=Categorical_Slots_plus_Averaging_BI(param, Data, Input)
 % Specify parameters
 K=param(1); % Capacity
 kappa_1=param(2); % Unit precision
-kappa_c=param(3); % Precision of categorical memory
-p_c=param(4); % Weight of categorical memory
-Nparam=4;
 if ~isfield(Input,'Variants') % No Variants
     Input.Variants={};
+end
+SS=Data.SS;
+SS_range=unique(SS);
+kappa_c=param(3); % Precision of categorical memory
+if any(strcmp(Input.Variants,'VariableCatWeight'))
+    p_c=param(4:4+length(SS_range)-1);
+    Nparam=3+length(SS_range);
+else
+    p_c=param(4); % Weight of categorical memory
+    Nparam=4;
 end
 if any(strcmp(Input.Variants,'ResponseNoise'))
     Nparam=Nparam+1;
@@ -100,8 +107,6 @@ samples=Data.sample;
 responses=Data.response;
 categories=Data.category;
 error_range=Data.error_range;
-SS=Data.SS;
-SS_range=unique(SS);
 if length(error_range)==2
     continuous=1;
     period=error_range(2)-error_range(1);
@@ -121,7 +126,7 @@ if ~any(strcmp(Input.Variants,'ContinuousK'))
     K=floor(K); % Note that capacity is a fixed, discrete value here
 end
 if strcmp(Input.Output,'LP') || strcmp(Input.Output,'Prior') || strcmp(Input.Output,'All')
-    Prior=prior(param, Input); % get prior
+    Prior=prior(param, Data, Input); % get prior
 elseif strcmp(Input.Output,'LLH') || strcmp(Input.Output,'LPPD')
     Prior=1; % uniform prior
 end
@@ -133,6 +138,11 @@ if ~strcmp(Input.Output,'Prior')
         p_error_NT=zeros(1,length(errors));
         for i_error=1:length(errors)
             N=SS(i_error);
+            if any(strcmp(Input.Variants,'VariableCatWeight'))
+                p_cc=p_c(SS_range==N);
+            else
+                p_cc=p_c;
+            end
             error0=errors(i_error)+bias;
             error0_c=errors_c(i_error)+bias;
             p_low=1-mod(K,N)/N;
@@ -144,24 +154,24 @@ if ~strcmp(Input.Output,'Prior')
                 if K<N % Beyond capacity
                     conv_1=sqrt((kappa_1).^2+(kappa_r)^2+2*kappa_1*kappa_r.*cosd(error0));
                     p_error(i_error)=(1-K/N)*1/(error_range(2)-error_range(1))+...
-                        (K/N)*((1-p_c)*(besseli(0,conv_1)./(2*pi*besseli(0,kappa_1)*besseli(0,kappa_r)))+...
-                        p_c*(besseli(0,conv_1_c)./(2*pi*besseli(0,kappa_c)*besseli(0,kappa_r))));
+                        (K/N)*((1-p_cc)*(besseli(0,conv_1)./(2*pi*besseli(0,kappa_1)*besseli(0,kappa_r)))+...
+                        p_cc*(besseli(0,conv_1_c)./(2*pi*besseli(0,kappa_c)*besseli(0,kappa_r))));
                 else
                     conv_low=sqrt((kappa_low).^2+(kappa_r)^2+2*kappa_low*kappa_r.*cosd(error0));
                     conv_high=sqrt((kappa_high).^2+(kappa_r)^2+2*kappa_high*kappa_r.*cosd(error0));
-                    p_error(i_error)=(1-p_c)*(p_low*(besseli(0,conv_low)./(2*pi*besseli(0,kappa_low)*besseli(0,kappa_r)))+...
+                    p_error(i_error)=(1-p_cc)*(p_low*(besseli(0,conv_low)./(2*pi*besseli(0,kappa_low)*besseli(0,kappa_r)))+...
                         p_high*(besseli(0,conv_high)./(2*pi*besseli(0,kappa_high)*besseli(0,kappa_r))))+...
-                        p_c*besseli(0,conv_1_c)./(2*pi*besseli(0,kappa_c)*besseli(0,kappa_r));
+                        p_cc*besseli(0,conv_1_c)./(2*pi*besseli(0,kappa_c)*besseli(0,kappa_r));
                 end
             else
                 if K<N
                     p_error(i_error)=(1-K/N)*1/(error_range(2)-error_range(1))+...
-                        (K/N)*((1-p_c)*(exp(kappa_1.*cosd(error0))./(2*pi*besseli(0,kappa_1)))+...
-                        p_c*(exp(kappa_c.*cosd(error0_c))./(2*pi*besseli(0,kappa_c))));
+                        (K/N)*((1-p_cc)*(exp(kappa_1.*cosd(error0))./(2*pi*besseli(0,kappa_1)))+...
+                        p_cc*(exp(kappa_c.*cosd(error0_c))./(2*pi*besseli(0,kappa_c))));
                 else
-                    p_error(i_error)=(1-p_c)*(p_low*(exp(kappa_low.*cosd(error0))./(2*pi*besseli(0,kappa_low)))+...
+                    p_error(i_error)=(1-p_cc)*(p_low*(exp(kappa_low.*cosd(error0))./(2*pi*besseli(0,kappa_low)))+...
                         p_high*(exp(kappa_high.*cosd(error0))./(2*pi*besseli(0,kappa_high))))+...
-                        p_c*(exp(kappa_c.*cosd(error0_c))./(2*pi*besseli(0,kappa_c)));
+                        p_cc*(exp(kappa_c.*cosd(error0_c))./(2*pi*besseli(0,kappa_c)));
                 end
             end
             
@@ -178,14 +188,14 @@ if ~strcmp(Input.Output,'Prior')
                             if K<N % beyond capacity
                                 conv_1=sqrt((kappa_1).^2+(kappa_r)^2+2*kappa_1*kappa_r.*cosd(error0_nt));
                                 p_temp_NT=p_temp_NT+(1-K/N)*1/(error_range(2)-error_range(1))+...
-                                    (K/N)*((1-p_c)*(besseli(0,conv_1)./(2*pi*besseli(0,kappa_1)*besseli(0,kappa_r))))+...
-                                    p_c*(besseli(0,conv_1_c_nt)./(2*pi*besseli(0,kappa_c)*besseli(0,kappa_r)));
+                                    (K/N)*((1-p_cc)*(besseli(0,conv_1)./(2*pi*besseli(0,kappa_1)*besseli(0,kappa_r))))+...
+                                    p_cc*(besseli(0,conv_1_c_nt)./(2*pi*besseli(0,kappa_c)*besseli(0,kappa_r)));
                             else % within capacity
                                 conv_low=sqrt((kappa_low).^2+(kappa_r)^2+2*kappa_low*kappa_r.*cosd(error0_nt));
                                 conv_high=sqrt((kappa_high).^2+(kappa_r)^2+2*kappa_high*kappa_r.*cosd(error0_nt));
-                                p_temp_NT=p_temp_NT+(1-p_c)*(p_low*(besseli(0,conv_low)./(2*pi*besseli(0,kappa_low)*besseli(0,kappa_r)))+...
+                                p_temp_NT=p_temp_NT+(1-p_cc)*(p_low*(besseli(0,conv_low)./(2*pi*besseli(0,kappa_low)*besseli(0,kappa_r)))+...
                                     p_high*(besseli(0,conv_high)./(2*pi*besseli(0,kappa_high)*besseli(0,kappa_r))))+...
-                                    p_c*(besseli(0,conv_1_c_nt)./(2*pi*besseli(0,kappa_c)*besseli(0,kappa_r)));
+                                    p_cc*(besseli(0,conv_1_c_nt)./(2*pi*besseli(0,kappa_c)*besseli(0,kappa_r)));
                             end
                         end
                     else
@@ -194,12 +204,12 @@ if ~strcmp(Input.Output,'Prior')
                             error0_nt_c=errors_nt_c(i_error,i_nt)+bias;
                             if K<N
                                 p_temp_NT=p_temp_NT+(1-K/N)*1/(error_range(2)-error_range(1))+...
-                                    (K/N)*((1-p_c)*(exp(kappa_.*cosd(error0_nt))./(2*pi*besseli(0,kappa_c)))+...
-                                    p_c*(exp(kappa_c.*cosd(error0_nt_c))./(2*pi*besseli(0,kappa_c))));
+                                    (K/N)*((1-p_cc)*(exp(kappa_.*cosd(error0_nt))./(2*pi*besseli(0,kappa_c)))+...
+                                    p_cc*(exp(kappa_c.*cosd(error0_nt_c))./(2*pi*besseli(0,kappa_c))));
                             else
-                                p_temp_NT=p_temp_NT+(1-p_c)*(p_low*(exp(kappa_low.*cosd(error0_nt))./(2*pi*besseli(0,kappa_low)))+...
+                                p_temp_NT=p_temp_NT+(1-p_cc)*(p_low*(exp(kappa_low.*cosd(error0_nt))./(2*pi*besseli(0,kappa_low)))+...
                                     p_high*(exp(kappa_high.*cosd(error0_nt))./(2*pi*besseli(0,kappa_high))))+...
-                                    p_c*(exp(kappa_c.*cosd(error0_nt_c))./(2*pi*besseli(0,kappa_c)));
+                                    p_cc*(exp(kappa_c.*cosd(error0_nt_c))./(2*pi*besseli(0,kappa_c)));
                             end
                         end
                     end
@@ -269,17 +279,27 @@ if ~strcmp(Input.Output,'Prior')
         p_T=zeros(1,length(errors));
         p_NT=zeros(1,length(errors));
         for i=1:length(errors)
-            p_T(i)=(1-s)*((1-p_c)*p_error(SS_range==SS(i),error_range==errors(i),1)+...
-                p_c*p_error_c(SS_range==SS(i),error_range==errors_c(i),1));
+            if any(strcmp(Input.Variants,'VariableCatWeight'))
+                p_cc=p_c(SS_range==SS(i));
+            else
+                p_cc=p_c;
+            end
+            p_T(i)=(1-s)*((1-p_cc)*p_error(SS_range==SS(i),error_range==errors(i),1)+...
+                p_cc*p_error_c(SS_range==SS(i),error_range==errors_c(i),1));
         end
         if any(strcmp(Input.Variants,'Swap'))
             for i=1:length(errors_nt)
+                if any(strcmp(Input.Variants,'VariableCatWeight'))
+                    p_cc=p_c(SS_range==SS(i));
+                else
+                    p_cc=p_c;
+                end
                 if SS(i)==1
                     p_NT(i)=0;
                 else
                     for j=1:SS(i)-1
-                        p_NT(i)=p_NT(i)+s/(SS(i)-1)*((1-p_c)*p_error(SS_range==SS(i),error_range==errors_nt(i,j), 1)+...
-                            p_c*p_error_c(SS_range==SS(i),error_range==errors_nt_c(i,j), 1));
+                        p_NT(i)=p_NT(i)+s/(SS(i)-1)*((1-p_cc)*p_error(SS_range==SS(i),error_range==errors_nt(i,j), 1)+...
+                            p_cc*p_error_c(SS_range==SS(i),error_range==errors_nt_c(i,j), 1));
                     end
                 end
             end
@@ -297,6 +317,10 @@ if ~strcmp(Input.Output,'Prior')
     
     % Posterior
     LP=-log(Prior)+LLH; % likelihood*prior
+    
+    if LP==Inf || isnan(LP)
+        LP=realmax('double'); % Output should be a real value
+    end
     
 end
 
@@ -316,14 +340,10 @@ elseif strcmp(Input.Output,'All')
     Output.LPPD=log(p_LH);
 end
 
-if ~isstruct(Output) && (any(abs(Output))==Inf || any(isnan(Output)))
-    Output=realmax('double'); % Output should be a real value
-end
-
 end
 
 % Define prior
-function p=prior(param, Input)
+function p=prior(param, Data, Input)
 
 % Specify parameters
 K=param(1); % Capacity
@@ -332,15 +352,27 @@ p0(1)=wblpdf(K,3.5,3); % given that K is ofter 3~4
 kappa_1=param(2); % Unit resource
 % Gamma prior for unit resource
 p0(2)=gampdf(kappa_1,3,5);
-kappa_c=param(3); % categorical memory precision
-% Gamma prior for categorical memory precision
-p0(3)=gampdf(kappa_c,3,5);
-p_c=param(4); % categorical weight
-% Gaussian prior for the rate of categorical memory
-p0(4)=normpdf(p_c, 0.5, 1);
-Nparam=4;
 if ~isfield(Input,'Variants') % No Variants
     Input.Variants={};
+end
+SS=Data.SS;
+SS_range=unique(SS);
+if any(strcmp(Input.Variants,'VariableCatWeight'))
+    kappa_c=param(3); % categorical memory precision
+    % Gamma prior for categorical memory precision
+    p0(3)=gampdf(kappa_c,3,5);
+    p_c=param(4:4+length(SS_range)-1); % categorical weight
+    % Gaussian prior for the rate of categorical memory
+    p0(4:4+length(SS_range)-1)=normpdf(p_c, 0.5, 1);
+    Nparam=3+length(SS_range);
+else
+    kappa_c=param(3); % categorical memory precision
+    % Gamma prior for categorical memory precision
+    p0(3)=gampdf(kappa_c,3,5);
+    p_c=param(4); % categorical weight
+    % Gaussian prior for the rate of categorical memory
+    p0(4)=normpdf(p_c, 0.5, 1);
+    Nparam=4;
 end
 if any(strcmp(Input.Variants,'ResponseNoise'))
     Nparam=Nparam+1;

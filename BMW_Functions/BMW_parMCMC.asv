@@ -300,23 +300,21 @@ switch config.GetParam
         [Summary.BestPosterior, IndMAXposterior]=max(RawSampling.logPosterior); % max of logPosterior density
         Summary.FitParam=RawSampling.Samples(IndMAXposterior,:); % best parameter(s)
     case 'mean'
+        %[Summary.BestPosterior, IndMAXposterior]=max(RawSampling.logPosterior); % max of logPosterior density
         Summary.FitParam=mean(RawSampling.Samples); % best parameter(s)
-        Summary.BestPosterior=NewFunction(Summary.FitParam, data, model);
     case 'mean_trimmed'
+        %[Summary.BestPosterior, IndMAXposterior]=max(RawSampling.logPosterior); % max of logPosterior density
         Samples_Trimmed=sort([RawSampling.logPosterior,RawSampling.Samples]);
         min_Trim=ceil(0.05/2*size(Samples_Trimmed,1));
         max_Trim=size(Samples_Trimmed,1)-ceil(0.05/2*size(Samples_Trimmed,1));
         Summary.FitParam=mean(Samples_Trimmed(min_Trim:max_Trim,2:end)); % best parameter(s)
-        Summary.BestPosterior=NewFunction(Summary.FitParam, data, model);
+        Summary.BestPosterior=NewFunction(model., data, model);
     case 'median'
+        %[Summary.BestPosterior, IndMAXposterior]=median(RawSampling.logPosterior); % max of logPosterior density
         Summary.FitParam=median(RawSampling.Samples); % best parameter(s)
-        Summary.BestPosterior=NewFunction(Summary.FitParam, data, model);
     case 'median_trimmed'
-        Samples_Trimmed=sort([RawSampling.logPosterior,RawSampling.Samples]);
-        min_Trim=ceil(0.05/2*size(Samples_Trimmed,1));
-        max_Trim=size(Samples_Trimmed,1)-ceil(0.05/2*size(Samples_Trimmed,1));
-        Summary.FitParam=median(Samples_Trimmed(min_Trim:max_Trim,2:end)); % best parameter(s)
-        Summary.BestPosterior=NewFunction(Summary.FitParam, data, model);
+        %[Summary.BestPosterior, IndMAXposterior]=max(RawSampling.logPosterior); % max of logPosterior density
+        Summary.FitParam=median(RawSampling.Samples); % best parameter(s)
 end
 
 %% Epilogue

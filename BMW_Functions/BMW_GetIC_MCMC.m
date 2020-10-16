@@ -68,6 +68,7 @@ Likelihood=RawSampling.logLikelihood;
 LPPD=RawSampling.logPointwiseLikelihood;
 Nsample=size(Samples,1);
 Nparam=size(Samples,2);
+Ntrial=length(Data{1}.sample);
 % set default
 if nargin==3 || ~isfield(Method,'IC')
     Method.IC='LME_HarmonicMean';
@@ -80,6 +81,38 @@ if nargin==3 || ~isfield(Method, 'Transform')
 end
 % get IC
 switch Method.IC
+    case 'LLH'
+        if Method.Verbosity==2;
+            fprintf('\nNow start estimating min LLH... \n\n')
+        end
+        IC=max(-Likelihood);
+        if Method.Verbosity==2;
+            fprintf('Done! minLLH=%d\n',IC)
+        end
+    case 'AIC'
+        if Method.Verbosity==2;
+            fprintf('\nNow start estimating AIC... \n\n')
+        end
+        IC=2*max(-Likelihood)+2*Nparam;
+        if Method.Verbosity==2;
+            fprintf('Done! AIC=%d\n',IC)
+        end
+    case 'AICc'
+        if Method.Verbosity==2;
+            fprintf('\nNow start estimating min AICc... \n\n')
+        end
+        IC=2*max(-Likelihood)+2*Nparam+2*Nparam*(Nparam+1)/(Ntrial-Nparam-1);
+        if Method.Verbosity==2;
+            fprintf('Done! AICc=%d\n',IC)
+        end
+    case 'BIC'
+        if Method.Verbosity==2;
+            fprintf('\nNow start estimating min LLH... \n\n')
+        end
+        IC=2*max(-Likelihood)+log(Ntrial)*Nparam;
+        if Method.Verbosity==2;
+            fprintf('Done! DIC1=%d\n',IC)
+        end
     case 'DIC1' % get deviance information criterion
         if Method.Verbosity==2;
             fprintf('\nNow start estimating DIC... \n\n')
@@ -91,7 +124,7 @@ switch Method.IC
         % get deviance of mean
         MeanSample=mean(Samples,1);
         eval(['DevM=2*',Model.Model,'(MeanSample,Data,Model);'])
-        % get 'effective number of parameters'
+        % get the 'effective number of parameters'
         pD=MDev-DevM;
         % DIC1
         IC=MDev+pD;
@@ -172,8 +205,8 @@ switch Method.IC
         SampleCov=cov(RawSamples);
         SampleSD=std(RawSamples);
         IDMean=mean(RawSamples);
-        IDCov0=SampleCov*(Nsample-1)/Nsample; % Unbiased estimator
-        IDCov=IDCov0+0.0001*mean(mean(IDCov0))*eye(Nparam); % To avoid the singularity problem
+        IDCov0=SampleCov*(Nsample-1)/Nsample; % Unbiased estimation
+        IDCov=IDCov0+0.001*diag(diag(IDCov0)); % To avoid the singularity problem
 %         % skewness
 %         SampleMoment3rd=mean((RawSamples-repmat(mean(RawSamples),Nsample,1)).^3); % 3rd moment
 %         SampleSkewness=SampleMoment3rd./(SampleSD.^3); % standardize
@@ -183,9 +216,13 @@ switch Method.IC
 %         if any(abs(SampleSkewness-1)>2)
             % get log importance density
             LP=Posterior;
-            LID=zeros(Nsample,1);
-            for i=1:Nsample
-                LID(i)=log(mvnpdf(RawSamples(i,:),IDMean,IDCov)); % we use multivariate normal distribution
+            if any(any(isinf(IDCov))) || any(any(isnan(IDCov))) || rcond(IDCov)<1e-15 % avoid singularity
+                LID=ones(Nsample,1);
+            else
+                LID=zeros(Nsample,1);
+                for i=1:Nsample
+                    LID(i)=log(mvnpdf(RawSamples(i,:),IDMean,IDCov)); % we use multivariate normal distribution
+                end
             end
             % scaling
             LID=LID+log((min(SampleKurtosis)/4).^0.25);
@@ -193,7 +230,7 @@ switch Method.IC
             DR=LID-LP;
             mDR=median(DR); 
             if mDR>=log(realmax('double'))
-                DR=DR-mDR; % Avoid reaching computational limit
+                DR=DR-mDR; % Avoid reaching the computational limit
             end
             DR=exp(DR);
             % test bounds (due to the computational limit)
@@ -218,9 +255,11 @@ switch Method.IC
         SampleCov=cov(RawSamples);
         IDMean=mean(RawSamples);
         IDCov=SampleCov*(Nsample-1)/Nsample; % Unbiased estimator
-        IDCov=IDCov+0.0001*mean(mean(IDCov))*eye(Nparam); % To avoid the singularity problem
         % Sampling based on the proposal distribution
         Nprop=Nsample/2;
+        if rcond(IDCov)<1e-15 % avoid singularity
+            IDCov=IDCov+(1e-15/rcond(IDCov))*eye(length(IDCov));
+        end
         [PropSamples,PropID]=randmvn(Nprop,IDMean,IDCov);
         if Method.Verbosity==2;
             fprintf('Done!\n')
@@ -261,7 +300,7 @@ switch Method.IC
         LL2=LPprop-log(PropID);
         LLstar=median(LL1); % avoid reaching the computational limit, see https://osf.io/8x7m9/
         % use the optimal bridging function in Gronau et al, 2017
-        MaxT=1e6;
+        MaxT=Nparam*1e6;
         ToleranceME=1e-10;
         ME0=1e-6; % initial guess
         s1=Nsample/(Nsample+Nprop);
@@ -301,7 +340,7 @@ switch Method.IC
         end
         if t==MaxT
             if Method.Verbosity>=1
-                fprintf('\nReach max number of interation, marginal likelihood didn''t converge...\n')
+                fprintf('\nReached the max number of iteration, marginal likelihood didn''t converge...\n')
             end
             MEfinal=-log(ME0)-LLstar;
         end
