@@ -7,11 +7,11 @@
 %
 % ## Model space ##
 % ### Continuous Recall ###
-% Standard Mixture(Mix)/Item Limit(IL)/Slots-plus-Averaging(SA)/
-% Variable Precision(VP)/VP with capacity(VPcap)/
-% Equal Precision(EP)/Categorical SA(cSA)/Categorical VP(cVP)/
-% Categorical Mixture(cMix)/Categorical VPcap(cVPcap)
-% Model Variants: Swap Rate/Bias/Precision Fluctuation/Bias Fluctuation
+% Standard Mixture/Item Limit/Slots-plus-Averaging/
+% Variable Precision/Variable Precision with capacity/
+% Equal Precision/Category-Only
+% Model Variants: Swap Rate/Bias/Precision Fluctuation/
+% Bias Fluctuation/Categorical Encoding (Between-Item)/Categorical Encoding (Within-Item)
 % ### Change Detection ###
 % Fixed-Capacity(Central-Probe/Full-Display/Single-Probe)/Signal Detection
 % Model Variants: Lapse Rate/Ensemble Encoding
@@ -58,6 +58,8 @@ else
             RemoveAllPath_BMW;
         case 'Manual'
             open('BMW_Manual.pdf')
+        case 'Model'
+            disp('')
         case 'AddPath'
             AddAllPath_BMW;
         case 'CheckMethods'
