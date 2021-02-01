@@ -73,8 +73,8 @@ MC_BMW=cell(Nrepeat,1);
 for r=1:Nrepeat
     Q_BMW=Q_BMW0(r,:);
     if Q_BMW{1}.FitOptions.RFXBMS==1
-        Opt_BMC.Start=ones(Nmodel,1); % Flat prior
-        Opt_BMC.MaxIter=5000;
+        Opt_BMC.Start=1e-6*ones(Nmodel,1); % Flat prior
+        Opt_BMC.MaxIter=1e6;
         Opt_BMC.Stop=1e-6;
         Opt_BMC.Verbosity=0;
         Opt_BMC.Rec=0;

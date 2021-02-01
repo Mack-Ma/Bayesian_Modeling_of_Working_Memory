@@ -42,7 +42,45 @@ switch LearnType
             end
         end
     case 'Unsupervised'
-        
+        if nargin==1
+            Method.Algorithm='BinarySearch'; % binary search as default
+            Method.Stat='CircSD';
+            Method.Step=1;
+        elseif isfield(Method,'Algorithm') && strcmp(Method.Algorithm,'BinarySearch')
+            if ~isfield(Method,'Step')
+                Method.Step=1;
+            end
+            if ~isfield(Method,'Stat')
+                Method.Stat='circSD';
+            end
+        elseif isfield(Method,'Algorithm') && strcmp(Method.Algorithm,'KernelDensity')
+            if ~isfield(Method,'Step')
+                Method.Step=ceil((abs(Data.sample_range(end)-Data.sample_range(1)))/20);
+            end
+            if ~isfield(Method,'Stat')
+                Method.Stat='CircSD';
+            end
+        end
+        % Get curve
+        f_raw=zeros(length(sample_range),1);
+        for i=1:length(Data.sample_range)
+            trial_id=Data.sample==Data.sample_range(i);
+            errors=Data.response(trial_id)-Data.sample(trial_id);
+            f_raw(i)=CircSummary_BMW(errors(trial_id),Method.Stat);
+        end
+        switch Method.Algorithm
+            case 'BinarySearch'
+                % Kernel average smoother
+                kappa=100; % kernel radius
+                f_smooth=zeros(length(Data.sample_range),1);
+                for i=1:length(Data.sample_range)
+                    f_weight=exp(kappa.*cosd(Data.sample_range-Data.sample_range(i)))./(2*pi*besseli(0,kappa));
+                    f_weight=f_weight/sum(f_weight);
+                    f_smooth(i)=sum(f_raw.*f_weight);
+                end
+            case 'KernelDensity'
+            case 'FourierFit'
+        end
 end
 
 end

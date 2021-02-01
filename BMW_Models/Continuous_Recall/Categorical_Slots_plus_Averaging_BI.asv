@@ -239,16 +239,15 @@ if ~strcmp(Input.Output,'Prior')
                 else
                     for i_error=1:length(error_range)
                         error0=error_range(i_error)+bias;
-                        %                         p_error(i_N,i_error)=(1-K/N)/(2*period/360)/pi+...
-                        %                             (K/N)*(exp(kappa_1.*cosd(error0/(period/360)))./(2*pi*besseli(0,kappa_1)));
-                        p_error(i_N,i_error)=exp(kappa_1.*cosd(error0/(period/360)))./(2*pi*besseli(0,kappa_1));
-                        %                         p_error_c(i_N,i_error)=(1-K/N)/(2*period/360)/pi+...
-                        %                             (K/N)*(exp(kappa_c.*cosd(error0/(period/360)))./(2*pi*besseli(0,kappa_c)));
-                        p_error_c(i_N,i_error)=exp(kappa_c.*cosd(error0/(period/360)))./(2*pi*besseli(0,kappa_c));
+%                         p_error(i_N,i_error)=(1-K/N)/(2*period/360)/pi+...
+%                             (K/N)*(exp(kappa_1.*cosd(error0/(period/360)))./(2*pi*besseli(0,kappa_1)));
+                            p_error(i_N,i_error)=exp(kappa_1.*cosd(error0/(period/360)))./(2*pi*besseli(0,kappa_1));
+%                         p_error_c(i_N,i_error)=(1-K/N)/(2*period/360)/pi+...
+%                             (K/N)*(exp(kappa_c.*cosd(error0/(period/360)))./(2*pi*besseli(0,kappa_c)));
                     end
                 end
-                p_error(i_N,:)=(K/N)*p_error(i_N,:)/sum(p_error(i_N,:))+(1-K/N)/length(error_range);
-                p_error_c(i_N,:)=(K/N)*p_error_c(i_N,:)/sum(p_error_c(i_N,:))+(1-K/N)/length(error_range);
+                p_error(i_N,:)=p_error(i_N,:,1)/sum(p_error(i_N,:,1));
+                p_error_c(i_N,:)=p_error_c(i_N,:,1)/sum(p_error_c(i_N,:,1));
             else
                 p_low=1-mod(K,N)/N;
                 p_high=mod(K,N)/N;
@@ -286,8 +285,8 @@ if ~strcmp(Input.Output,'Prior')
             else
                 p_cc=p_c;
             end
-            p_T(i)=(1-s)*((1-p_cc)*p_error(SS_range==SS(i),error_range==errors(i))+...
-                p_cc*p_error_c(SS_range==SS(i),error_range==errors_c(i)));
+            p_T(i)=(1-s)*((1-p_cc)*p_error(SS_range==SS(i),error_range==errors(i),1)+...
+                p_cc*p_error_c(SS_range==SS(i),error_range==errors_c(i),1));
         end
         if any(strcmp(Input.Variants,'Swap'))
             for i=1:length(errors_nt)

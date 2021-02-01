@@ -90,12 +90,12 @@ if ~isfield(config,'Convergence')
     config.Convergence.Diagnostic='GR'; % set conventional GR as the default way to diagnose convergence
     config.Convergence.Nbatchburnin=200; % number of burn-in samples per batch
     config.Convergence.Nmaxbatchburnin=50; % max number of burn-in batches
-    config.Convergence.Tol=.1; % R threshold
+    config.Convergence.Tol=0.1; % R threshold
 else
     if ~isfield(config.Convergence,'Diagnostic'), config.Convergence.Diagnostic='GR'; end
     if ~isfield(config.Convergence,'Nbatchburnin'), config.Convergence.Nbatchburnin=200; end
-    if ~isfield(config.Convergence,'Nmaxbatchburnin'), config.Convergence.Nmaxbatchburnin=25; end
-    if ~isfield(config.Convergence,'Tol'), config.Convergence.Tol=0.1+log(Nparam)/10; end
+    if ~isfield(config.Convergence,'Nmaxbatchburnin'), config.Convergence.Nmaxbatchburnin=50; end
+    if ~isfield(config.Convergence,'Tol'), config.Convergence.Tol=0.1; end%+log(Nparam)/10; end
 end
 if ~isfield(config,'Ncore')
     config.Ncore=Nchain;
@@ -124,8 +124,8 @@ if strcmp(config.Algorithm,'DE') % Differential Evolution
         % Note that here we adopted the proposed values in Turner et al., 2013,
         % which might partly depend on Gelman et al., 1996,
         % with some adaptation
-        gamma=2.38/sqrt(2*Nparam); % scales the difference vector
-        eps=0.01; % random jitter (the range of the uniform distribution)
+        gamma=2.38.^2/Nparam; % scales the difference vector
+        eps=0.001; % random jitter (the range of the uniform distribution)
     else
         gamma=config.MCMCparam(1);
         eps=config.MCMCparam(2:end);
@@ -141,7 +141,7 @@ elseif strcmp(config.Algorithm,'MH') % Metropolis-Hastings
     if ~isfield(config,'MCMCparam') % default
         Sd=2.38^2/Nparam; % scales the estimated covariance of the past samples
         t0=2*Nparam; % the start point of adaptation, assign 0 to call off the adaptation
-        eps=0.01; % scales the constant that avoids the covariance matrix from being singular
+        eps=0.001; % scales the constant that avoids the covariance matrix from being singular
     else
         Sd=config.MCMCparam(1);
         t0=config.MCMCparam(2);
@@ -295,6 +295,7 @@ for chain=1:Nchain
 end
 
 %% Summary Statistics
+model.Output=model.RealOutput;
 switch config.GetParam
     case 'max'
         [Summary.BestPosterior, IndMAXposterior]=max(RawSampling.logPosterior); % max of logPosterior density
@@ -367,7 +368,7 @@ while 1 % redo sampling if the current sample is out of bounds
     ChainLot=randsample(ChainRange,2); % ramdomly pick two chains without repetition
     ChainDiff=gamma*(start1(ChainLot(1),:)-start1(ChainLot(2),:)); % get difference vector
     DiffNum=randsample(1:size(start1,2),1);
-    ChainDiff(DiffNum)=randsample([0,5,ones(1,8)],1)*ChainDiff(DiffNum);
+    ChainDiff(DiffNum)=randsample([0, 5, ones(1,8)],1)*ChainDiff(DiffNum);
     UniNoise=2*eps.*rand(1,length(eps))-abs(eps); % noise
     PropState=start1(chain,:)+ChainDiff+UniNoise; % proposal state
     if strcmp(Transform,'NoTransform')
@@ -618,4 +619,5 @@ if R<1+delta
 else
     BoolConverge=0; % not coverged yet
 end
+
 end

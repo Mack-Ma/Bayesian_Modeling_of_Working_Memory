@@ -85,15 +85,15 @@ end
 % get IC
 switch Method.IC
     case 'LLH'
-        if Method.Verbosity==2
+        if Method.Verbosity==2;
             fprintf('\nNow start estimating min LLH... \n\n')
         end
         IC=max(-Likelihood);
-        if Method.Verbosity==2
+        if Method.Verbosity==2;
             fprintf('Done! minLLH=%d\n',IC)
         end
     case 'AIC'
-        if Method.Verbosity==2
+        if Method.Verbosity==2;
             fprintf('\nNow start estimating AIC... \n\n')
         end
         IC=2*max(-Likelihood)+2*Nparam;

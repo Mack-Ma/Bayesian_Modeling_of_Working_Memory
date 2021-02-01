@@ -161,16 +161,16 @@ else
                 i_N=SS_range==N;
                 if any(strcmp(Input.Variants,'ResponseNoise'))
                     if K<N % beyond capacity
-                        conv_kappa=sqrt(kappa0(i_N,i_error).^2+kappa_r^2+2*kappa0(i_N,i_error)*kappa_r.*cosd(error0));
+                        conv_kappa=sqrt(kappa0(i_N,i_error).^2+kappa_r^2+2*kappa0(i_N,i_error)*kappa_r.*cosd(error0/(period/360)));
                         p_error(i_error)=besseli(0,conv_kappa)./(2*pi*besseli(0,kappa0(i_N,i_error))*besseli(0,kappa_r));
                     else % within capacity
-                        p_error(i_error)=exp(kappa0(i_N,i_error).*cosd(error0))./(2*pi*besseli(0,kappa0(i_N,i_error)));
+                        p_error(i_error)=exp(kappa0(i_N,i_error).*cosd(error0/(period/360)))./(2*pi*besseli(0,kappa0(i_N,i_error)));
                     end
                 else
                     if K<N % beyond capacity
-                        p_error(i_error)=(1-K/N)*1/(error_range(2)-error_range(1))+(K/N)*exp(kappa0(i_N,i_error).*cosd(error0))./(2*pi*besseli(0,kappa0(i_N,i_error)));
+                        p_error(i_error)=(1-K/N)*1/(error_range(2)-error_range(1))+(K/N)*exp(kappa0(i_N,i_error).*cosd(error0/(period/360)))./(2*pi*besseli(0,kappa0(i_N,i_error)));
                     else % within capacity
-                        p_error(i_error)=exp(kappa0(i_N,i_error).*cosd(error0))./(2*pi*besseli(0,kappa0(i_N,i_error)));
+                        p_error(i_error)=exp(kappa0(i_N,i_error).*cosd(error0/(period/360)))./(2*pi*besseli(0,kappa0(i_N,i_error)));
                     end
                 end
                 
@@ -182,7 +182,7 @@ else
                         if any(strcmp(Input.Variants,'ResponseNoise'))
                             for i_nt=1:N-1
                                 error0_nt=errors_nt(i_error,i_nt)+bias+biasF*cosd(4*samples_nt_cos(i_error,i_nt)-90); % Errors with bias
-                                conv_kappa_NT=sqrt(kappa0(i_N,i_error).^2+kappa_r^2+2*kappa0(i_N,i_error)*kappa_r.*cosd(error0_nt));
+                                conv_kappa_NT=sqrt(kappa0(i_N,i_error).^2+kappa_r^2+2*kappa0(i_N,i_error)*kappa_r.*cosd(error0_nt/(period/360)));
                                 if K<N
                                     p_temp_NT=p_temp_NT+(1-K/N)*1/(error_range(2)-error_range(1))+(K/N)*besseli(0,conv_kappa_NT)./(2*pi*besseli(0,kappa0(i_N,i_error))*besseli(0,kappa_r));
                                 else
@@ -193,9 +193,9 @@ else
                             for i_nt=1:N-1
                                 error0_nt=errors_nt(i_error,i_nt)+bias+biasF*cosd(4*samples_nt_cos(i_error,i_nt)-90); % Errors with bias
                                 if K<N % beyond capacity
-                                    p_temp_NT=p_temp_NT+(1-K/N)*1/(error_range(2)-error_range(1))+(K/N)*exp(kappa0(i_N,i_error).*cosd(error0_nt))./(2*pi*besseli(0,kappa0(i_N,i_error)));
+                                    p_temp_NT=p_temp_NT+(1-K/N)*1/(error_range(2)-error_range(1))+(K/N)*exp(kappa0(i_N,i_error).*cosd(error0_nt/(period/360)))./(2*pi*besseli(0,kappa0(i_N,i_error)));
                                 else % within capacity
-                                    p_temp_NT=p_temp_NT+exp(kappa0(i_N,i_error).*cosd(error0_nt))./(2*pi*besseli(0,kappa0(i_N,i_error)));
+                                    p_temp_NT=p_temp_NT+exp(kappa0(i_N,i_error).*cosd(error0_nt/(period/360)))./(2*pi*besseli(0,kappa0(i_N,i_error)));
                                 end
                             end
                         end
@@ -220,15 +220,15 @@ else
                         for i_error=1:length(error_range)
                             error0=error_range(i_error)+bias_cur;
                             % Von Mises distribution convoluted by kappa_r
-                            conv_kappa=sqrt(kappa0(i_N,:).^2+kappa_r^2+2*kappa0(i_N,:)*kappa_r.*cosd(error0));
-                            p_error(i_N,i_error,:)=(1-K/N)*1/length(error_range)+...
+                            conv_kappa=sqrt(kappa0(i_N,:).^2+kappa_r^2+2*kappa0(i_N,:)*kappa_r.*cosd(error0/(period/360)));
+                            p_error(i_N,i_error,:)=(1-K/N)*1/(2*period/360)/pi+...
                                 (K/N)*besseli(0,conv_kappa)./(2*pi*besseli(0,kappa0(i_N,:))*besseli(0,kappa_r));
                         end
                     else
                         for i_error=1:length(error_range)
                             error0=error_range(i_error)+bias_cur;
-                            p_error(i_N,i_error,:)=(1-K/N)*1/length(error_range)+...
-                                (K/N)*exp(kappa0(i_N,:).*cosd(error0))./(2*pi*besseli(0,kappa0(i_N,:)));
+                            p_error(i_N,i_error,:)=(1-K/N)*1/(2*period/360)/pi+...
+                                (K/N)*exp(kappa0(i_N,:).*cosd(error0/(period/360)))./(2*pi*besseli(0,kappa0(i_N,:)));
                         end
                     end
                     for i_sample=1:length(sample_range)
@@ -239,13 +239,13 @@ else
                         for i_error=1:length(error_range)
                             error0=error_range(i_error)+bias_cur;
                             % Von Mises distribution convoluted by kappa_r
-                            conv_kappa=sqrt(kappa0(i_N,:).^2+kappa_r^2+2*kappa0(i_N,:)*kappa_r.*cosd(error0));
+                            conv_kappa=sqrt(kappa0(i_N,:).^2+kappa_r^2+2*kappa0(i_N,:)*kappa_r.*cosd(error0/(period/360)));
                             p_error(i_N,i_error,:)=besseli(0,conv_kappa)./(2*pi*besseli(0,kappa0(i_N,:))*besseli(0,kappa_r));
                         end
                     else
                         for i_error=1:length(error_range)
                             error0=error_range(i_error)+bias_cur;
-                            p_error(i_N,i_error,:)=exp(kappa0(i_N,:).*cosd(error0))./(2*pi*besseli(0,kappa0(i_N,:)));
+                            p_error(i_N,i_error,:)=exp(kappa0(i_N,:).*cosd(error0/(period/360)))./(2*pi*besseli(0,kappa0(i_N,:)));
                         end
                     end
                     for i_sample=1:length(sample_range)

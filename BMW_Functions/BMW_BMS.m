@@ -22,18 +22,20 @@
 % Memory, Attention & Cognition (MAC) Lab,
 % 10/2/2019
 %
-% Bug reports or any other feedbacks please contact M.T. (BMW_ma2018@outlook.com)
+% Bug reports or any other feedbacks please contact M.T. (mack_ma2018@outlook.com)
 % BMW toolbox: https://github.com/BMW-Ma/Bayesian_Modeling_of_Working_Memory
 %
 
 function [output]=BMW_BMS(LME,Config)
 
 if isfield(Config, 'Start'), a0=Config.Start; 
-else a0=ones(size(LME,1),1); end % Start values of the parameters of the dirichlet prior
+else
+    a0=1e-6*ones(size(LME,1),1); % Start values of the parameters of the dirichlet prior
+end 
 MaxIter=Config.MaxIter; % Maximum times of iteration
 Stop=Config.Stop; % Stop criterion
 Rec=Config.Rec; % Assign 1 to record the result of each iteration
-Verbosity=Config.Verbosity; % Assign 1 to display iterations
+Verbosity=Config.Verbosity; % Assign 1 to display iteration
 Nmodel=size(LME,1); % Total # of models
 
 % Start iteration (variational bayes approximation)

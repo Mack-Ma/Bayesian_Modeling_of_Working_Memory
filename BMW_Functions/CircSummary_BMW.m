@@ -40,23 +40,29 @@
 % BMW toolbox: https://github.com/Mack-Ma/Bayesian_Modeling_of_Working_Memory
 %
 
-function Output=CircSummary_BMW(Stat, Data, Period, Bin)
+function Output=CircSummary_BMW(Stat, Data, Period, config)
 
-if nargin<4
+if nargin<4 || (nargin==4 && ~isfield(config,'Bin'))
     c1=1; % 1st correction factor
     c2=1; % 2nd correction factor
     if nargin==2
         Period=360;
     end
 else
+    Bin=config.Bin;
     UnitBin=Period/Bin;
     c1=UnitBin/2/sind(UnitBin/2);
     c2=UnitBin/sind(UnitBin);
 end
 
+if nargin<4 || (nargin==4 && ~isfield(config,'weight'))
+    config.weight=ones(size(Data));
+end
+weight=config.weight/sum(config.weight);
+
 Order=360/Period;
-A=mean(cosd(Order*Data));
-B=mean(sind(Order*Data));
+A=mean(weight.*cosd(Order*Data));
+B=mean(weight.*sind(Order*Data));
 Moment=A+1i*B; % 1st Trigonometric moment
 R=c1*sqrt(A^2+B^2); % Mean resultant vector length
 MeanAng=atan2d(B, A)/Order; % Mean resultant vector direction
@@ -77,7 +83,7 @@ elseif strcmp(Stat, 'AngDev')
 elseif strcmp(Stat,'CircSD')
     Output=CSD*180/pi;
 elseif strcmp(Stat,'CircDev')
-    if size(Data,2)==1; % When Data is a column vector
+    if size(Data,2)==1 % When Data is a column vector
         M1=repmat(Data, 1, length(Data));
         M2=repmat(Data', length(Data), 1);
     elseif size(Data,1)==1 % When Data is a row vector

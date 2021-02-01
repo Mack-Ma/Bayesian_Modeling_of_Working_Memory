@@ -179,7 +179,7 @@ else
     if isfield(Q, 'Variants')
         % Continuous recall models
         if any(strcmp(Q.Variants,'Category (Between-Item)')) && any(strcmp(Q.Model,{'Standard Mixture','Slots-plus-Averaging',...
-                'Variable Precision','Variable Precision with Capacity'}));
+                'Variable Precision','Variable Precision with Capacity'}))
             if any(strcmp(Q.Variants,'VariableCatWeight'))
                 Info.ParamInfo=[Info.ParamInfo, ', kappa_c (categorical precision), p_c (categorical memory rate)'];
                 Info.start=[Info.start, 50, 0.5*ones(1,Nss)];
@@ -196,13 +196,13 @@ else
             if any(strcmp(Q.Variants,'VariableCatWeight'))
                 Info.ParamInfo=[Info.ParamInfo, ', kappa_c (categorical precision), p_c (categorical memory rate)'];
                 Info.start=[Info.start, 50, 0.5*ones(1,Nss)];
-                Info.ub=[Info.ub, 700, 7*ones(1,Nss)];
-                Info.lb=[Info.lb, 0.001, -7*ones(1,Nss)];
+                Info.ub=[Info.ub, 700, ones(1,Nss)];
+                Info.lb=[Info.lb, 0.001, zeros(1,Nss)];
             else
                 Info.ParamInfo=[Info.ParamInfo, ', kappa_c (categorical precision), eps_c (categorical memory scaling)'];
                 Info.start=[Info.start, 50, 0.5];
-                Info.ub=[Info.ub, 700, 7];
-                Info.lb=[Info.lb, 0.001, -7];
+                Info.ub=[Info.ub, 700, 1];
+                Info.lb=[Info.lb, 0.001, -1];
             end
         end
         if any(strcmp(Q.Variants,'ResponseNoise')) && ~any(strcmp(Q.Model,{'Item Limit'}))

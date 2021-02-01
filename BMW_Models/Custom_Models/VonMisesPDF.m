@@ -42,7 +42,7 @@ if ischar(error_range) && strcmp(error_range,'continuous') % When error is conti
     p_error=zeros(1,length(errors));
     for i_error=1:length(errors)
         error0=bias+errors(i_error);
-        p_error(i_error)=exp(kappa.*cosd(error0))./(2*pi*besseli0_fast(kappa));
+        p_error(i_error)=exp(kappa.*cosd(error0))./(2*pi*besseli0(kappa));
     end
     % Calculate LH
     p_LH=p_error;
@@ -50,7 +50,7 @@ elseif ~ischar(error_range) % When error is discrete
     p_error=zeros(1,length(errors));
     for i_error=1:length(error_range)
         error0=bias+error_range(i_error);
-        p_error(i_error)=exp(kappa.*cosd(error0))./(2*pi*besseli0_fast(kappa));
+        p_error(i_error)=exp(kappa.*cosd(error0))./(2*pi*besseli0(kappa));
     end
     % Normalization
     p_error=p_error/sum(p_error);

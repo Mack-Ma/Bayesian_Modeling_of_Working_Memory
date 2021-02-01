@@ -1,7 +1,7 @@
 %% Slots-plus-Averaging
 %
 % Define the Slots-plus-Averaging model
-% ------------
+% ------------ 
 % Output=Slots_plus_Averaging(param, Data, Input)
 %
 % ## Theory ##
@@ -70,6 +70,7 @@ if isfield(Input,'Variants') && any(strcmp(Input.Variants,'Category (Within-Item
     Output=Categorical_Slots_plus_Averaging_WI(param,Data,Input);
 elseif isfield(Input,'Variants') && any(strcmp(Input.Variants,'Category (Between-Item)'))
     Output=Categorical_Slots_plus_Averaging_BI(param,Data,Input);
+elseif isfield(Input,'Variants') && any(strcmp(Input.Variants,'Category (Within-Item, Co-occurence)'))
 else
     % Specify parameters
     K=param(1); % Capacity
@@ -164,22 +165,22 @@ else
                 kappa_low=kappa*floor(K/N);
                 if any(strcmp(Input.Variants,'ResponseNoise'))
                     if K<N % Beyond capacity
-                        conv_1=sqrt((kappa).^2+(kappa_r)^2+2*kappa*kappa_r.*cosd(error0));
-                        p_error(i_error)=(1-K/N)*1/(error_range(2)-error_range(1))+...
+                        conv_1=sqrt((kappa).^2+(kappa_r)^2+2*kappa*kappa_r.*cosd(error0/(period/360)));
+                        p_error(i_error)=(1-K/N)*1/(2*period/360)/pi+...
                             (K/N)*(besseli(0,conv_1)./(2*pi*besseli(0,kappa)*besseli(0,kappa_r)));
                     else
-                        conv_low=sqrt((kappa_low).^2+(kappa_r)^2+2*kappa_low*kappa_r.*cosd(error0));
-                        conv_high=sqrt((kappa_high).^2+(kappa_r)^2+2*kappa_high*kappa_r.*cosd(error0));
+                        conv_low=sqrt((kappa_low).^2+(kappa_r)^2+2*kappa_low*kappa_r.*cosd(error0/(period/360)));
+                        conv_high=sqrt((kappa_high).^2+(kappa_r)^2+2*kappa_high*kappa_r.*cosd(error0/(period/360)));
                         p_error(i_error)=p_low*(besseli(0,conv_low)./(2*pi*besseli(0,kappa_low)*besseli(0,kappa_r)))+...
                             p_high*(besseli(0,conv_high)./(2*pi*besseli(0,kappa_high)*besseli(0,kappa_r)));
                     end
                 else
                     if K<N
-                        p_error(i_error)=(1-K/N)*1/(error_range(2)-error_range(1))+...
-                            (K/N)*exp(kappa.*cosd(error0))./(2*pi*besseli(0,kappa));
+                        p_error(i_error)=(1-K/N)*1/(2*period/360)/pi+...
+                            (K/N)*exp(kappa.*cosd(error0/(period/360)))./(2*pi*besseli(0,kappa));
                     else
-                        p_error(i_error)=p_low*(exp(kappa_low.*cosd(error0))./(2*pi*besseli(0,kappa_low)))+...
-                            p_high*(exp(kappa_high.*cosd(error0))./(2*pi*besseli(0,kappa_high)));
+                        p_error(i_error)=p_low*(exp(kappa_low.*cosd(error0/(period/360)))./(2*pi*besseli(0,kappa_low)))+...
+                            p_high*(exp(kappa_high.*cosd(error0/(period/360)))./(2*pi*besseli(0,kappa_high)));
                     end
                 end
                 if any(strcmp(Input.Variants,'Swap'))
@@ -191,12 +192,12 @@ else
                             for i_nt=1:N-1
                                 error0_nt=errors_nt(i_error,i_nt)+bias+biasF*cosd(4*samples_nt_cos(i_error,i_nt)-90); % Errors with bias
                                 if K<N % beyond capacity
-                                    conv_1=sqrt((kappa).^2+(kappa_r)^2+2*kappa*kappa_r.*cosd(error0_nt));
-                                    p_temp_NT=p_temp_NT+(1-K/N)*1/(error_range(2)-error_range(1))+...
+                                    conv_1=sqrt((kappa).^2+(kappa_r)^2+2*kappa*kappa_r.*cosd(error0_nt/(period/360)));
+                                    p_temp_NT=p_temp_NT+(1-K/N)*1/(2*period/360)/pi+...
                                         (K/N)*(besseli(0,conv_1)./(2*pi*besseli(0,kappa)*besseli(0,kappa_r)));
                                 else % within capacity
-                                    conv_low=sqrt((kappa_low).^2+(kappa_r)^2+2*kappa_low*kappa_r.*cosd(error0_nt));
-                                    conv_high=sqrt((kappa_high).^2+(kappa_r)^2+2*kappa_high*kappa_r.*cosd(error0_nt));
+                                    conv_low=sqrt((kappa_low).^2+(kappa_r)^2+2*kappa_low*kappa_r.*cosd(error0_nt/(period/360)));
+                                    conv_high=sqrt((kappa_high).^2+(kappa_r)^2+2*kappa_high*kappa_r.*cosd(error0_nt/(period/360)));
                                     p_temp_NT=p_temp_NT+p_low*(besseli(0,conv_low)./(2*pi*besseli(0,kappa_low)*besseli(0,kappa_r)))+...
                                         p_high*(besseli(0,conv_high)./(2*pi*besseli(0,kappa_high)*besseli(0,kappa_r)));
                                 end
@@ -205,11 +206,11 @@ else
                             for i_nt=1:N-1
                                 error0_nt=errors_nt(i_error,i_nt)+bias+biasF*cosd(4*samples_nt_cos(i_error,i_nt)-90); % Errors with bias
                                 if K<N
-                                    p_temp_NT=p_temp_NT+(1-K/N)*1/(error_range(2)-error_range(1))+...
-                                        (K/N)*(exp(kappa.*cosd(error0_nt))./(2*pi*besseli(0,kappa)));
+                                    p_temp_NT=p_temp_NT+(1-K/N)*1/(2*period/360)/pi+...
+                                        (K/N)*(exp(kappa.*cosd(error0_nt/(period/360)))./(2*pi*besseli(0,kappa)));
                                 else
-                                    p_temp_NT=p_temp_NT+p_low*(exp(kappa_low.*cosd(error0_nt))./(2*pi*besseli(0,kappa_low)))+...
-                                        p_high*(exp(kappa_high.*cosd(error0_nt))./(2*pi*besseli(0,kappa_high)));
+                                    p_temp_NT=p_temp_NT+p_low*(exp(kappa_low.*cosd(error0_nt/(period/360)))./(2*pi*besseli(0,kappa_low)))+...
+                                        p_high*(exp(kappa_high.*cosd(error0_nt/(period/360)))./(2*pi*besseli(0,kappa_high)));
                                 end
                             end
                         end
@@ -231,15 +232,15 @@ else
                     if any(strcmp(Input.Variants,'ResponseNoise'))
                         for i_error=1:length(error_range)
                             error0=error_range(i_error)+bias_cur;
-                            conv_1=sqrt((kappa0).^2+(kappa_r)^2+2*kappa0*kappa_r.*cosd(error0));
-                            p_error(i_N,i_error,:)=(1-K/N)*1/length(error_range)+...
+                            conv_1=sqrt((kappa0).^2+(kappa_r)^2+2*kappa0*kappa_r.*cosd(360/period*error0)); 
+                            p_error(i_N,i_error,:)=(1-(K/N))/(2*period/360)/pi+...
                                 (K/N)*(besseli(0,conv_1)./(2*pi*besseli(0,kappa0)*besseli(0,kappa_r)));
                         end
                     else
                         for i_error=1:length(error_range)
                             error0=error_range(i_error)+bias_cur;
-                            p_error(i_N,i_error,:)=(1-K/N)*1/length(error_range)+...
-                                (K/N)*exp(kappa0.*cosd(error0))./(2*pi*besseli(0,kappa0));
+                            p_error(i_N,i_error,:)=(1-(K/N))/(2*period/360)/pi+...
+                                (K/N)*exp(kappa0.*cosd(360/period*error0))./(2*pi*besseli(0,kappa0));
                         end
                     end
                     for i_sample=1:length(sample_range)
@@ -253,16 +254,16 @@ else
                     if any(strcmp(Input.Variants,'ResponseNoise'))
                         for i_error=1:length(error_range)
                             error0=error_range(i_error)+bias_cur;
-                            conv_low=sqrt((kappa_low).^2+(kappa_r)^2+2*kappa_low*kappa_r.*cosd(error0));
-                            conv_high=sqrt((kappa_high).^2+(kappa_r)^2+2*kappa_high*kappa_r.*cosd(error0));
+                            conv_low=sqrt((kappa_low).^2+(kappa_r)^2+2*kappa_low*kappa_r.*cosd(error0/(period/360)));
+                            conv_high=sqrt((kappa_high).^2+(kappa_r)^2+2*kappa_high*kappa_r.*cosd(error0/(period/360)));
                             p_error(i_N,i_error,:)=p_low*(besseli(0,conv_low)./(2*pi*besseli(0,kappa_low)*besseli(0,kappa_r)))+...
                                 p_high*(besseli(0,conv_high)./(2*pi*besseli(0,kappa_high)*besseli(0,kappa_r)));
                         end
                     else
                         for i_error=1:length(error_range)
                             error0=error_range(i_error)+bias_cur;
-                            p_error(i_N,i_error,:)=p_low*(exp(kappa_low.*cosd(error0))./(2*pi*besseli(0,kappa_low)))+...
-                                p_high*(exp(kappa_high.*cosd(error0))./(2*pi*besseli(0,kappa_high)));
+                            p_error(i_N,i_error,:)=p_low*(exp(kappa_low.*cosd(error0/(period/360)))./(2*pi*besseli(0,kappa_low)))+...
+                                p_high*(exp(kappa_high.*cosd(error0/(period/360)))./(2*pi*besseli(0,kappa_high)));
                         end
                     end
                     for i_sample=1:length(sample_range)
@@ -287,7 +288,7 @@ else
                         p_NT(i)=0;
                     else
                         for j=1:SS(i)-1
-                            if any(strcmp(Input.Variants,'BiasF')) || any(strcmp(Input.Variants,'PrecF'))==1
+                            if any(strcmp(Input.Variants,'BiasF')) || any(strcmp(Input.Variants,'PrecF'))
                                 p_NT(i)=p_NT(i)+s/(SS(i)-1)*p_error(SS_range==SS(i),error_range==errors_nt(i,j), sample_range==samples_nt_cos(i,j));
                             else
                                 p_NT(i)=p_NT(i)+s/(SS(i)-1)*p_error(SS_range==SS(i),error_range==errors_nt(i,j), 1);

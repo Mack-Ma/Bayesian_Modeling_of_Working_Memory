@@ -33,12 +33,12 @@ w=param(1:Nw); % Weights
 c=param(Nw+1); % Sensory scaling parameter
 Nparam=Nw+1;
 if isfield(Input,'Variants')
-    if isfield(Input.Variants,'Response') && Input.Variants.Response==1;
+    if isfield(Input.Variants,'Response') && Input.Variants.Response==1
         y=param(Nparam+1); % Response scaling parameter
     else
         y=1;
     end
-    if isfield(Input.Variants,'Strength') && Input.Variants.Strength==1;
+    if isfield(Input.Variants,'Strength') && Input.Variants.Strength==1
         a=param(Nparam+1); % memory strenth
     else
         a=1;
