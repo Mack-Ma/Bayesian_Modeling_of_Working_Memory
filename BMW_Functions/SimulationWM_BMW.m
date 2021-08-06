@@ -53,13 +53,13 @@ response=zeros(Ntrial,Nmem);
 for n=1:Nmem
     for ss=1:Nss
         ss_trial_id=find(data_prior.SS==SS_set(ss));
-        ng_trial_id=find(trial_type(n,:)>0);
-        g_trial_id=find(trial_type(n,:)==0);
-        ng_trial_id_all=sort(union(ng_trial_id, ss_trial_id));
-        g_trial_id_all=sort(union(g_trial_id, ss_trial_id));
+        ng_trial_id=find(trial_type(:,n)>0);
+        g_trial_id=find(trial_type(:,n)==0);
+        ng_trial_id_all=sort(intersect(ng_trial_id, ss_trial_id));
+        g_trial_id_all=sort(intersect(g_trial_id, ss_trial_id));
         Nng=length(ng_trial_id_all);
-        Nctrial=binornd(Nng, config.BI(n));
-        ctrial_id=sort(randsample(1:Nng,Nctrial));
+        Nctrial=binornd(Nng, config.BI(ss));
+        ctrial_id=sort(randsample(1:Nng, Nctrial));
         otrial_id=setdiff(1:Nng, ctrial_id);
         response_g=data_o.response(g_trial_id_all, n);
         response_o=data_o.response(ng_trial_id_all, n);

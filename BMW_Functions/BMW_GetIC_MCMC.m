@@ -97,27 +97,27 @@ switch Method.IC
             fprintf('\nNow start estimating AIC... \n\n')
         end
         IC=2*max(-Likelihood)+2*Nparam;
-        if Method.Verbosity==2;
+        if Method.Verbosity==2
             fprintf('Done! AIC=%d\n',IC)
         end
     case 'AICc'
-        if Method.Verbosity==2;
+        if Method.Verbosity==2
             fprintf('\nNow start estimating min AICc... \n\n')
         end
         IC=2*max(-Likelihood)+2*Nparam+2*Nparam*(Nparam+1)/(Ntrial-Nparam-1);
-        if Method.Verbosity==2;
+        if Method.Verbosity==2
             fprintf('Done! AICc=%d\n',IC)
         end
     case 'BIC'
-        if Method.Verbosity==2;
+        if Method.Verbosity==2
             fprintf('\nNow start estimating min LLH... \n\n')
         end
         IC=2*max(-Likelihood)+log(Ntrial)*Nparam;
-        if Method.Verbosity==2;
+        if Method.Verbosity==2
             fprintf('Done! DIC1=%d\n',IC)
         end
     case 'DIC1' % get deviance information criterion
-        if Method.Verbosity==2;
+        if Method.Verbosity==2
             fprintf('\nNow start estimating DIC... \n\n')
         end
         % get likelihood
@@ -131,11 +131,11 @@ switch Method.IC
         pD=MDev-DevM;
         % DIC1
         IC=MDev+pD;
-        if Method.Verbosity==2;
+        if Method.Verbosity==2
             fprintf('Done! DIC1=%d\n',IC)
         end
     case 'DIC2' % get deviance information criterion
-        if Method.Verbosity==2;
+        if Method.Verbosity==2
             fprintf('\nNow start estimating DIC... \n\n')
         end
         % get likelihood
@@ -146,11 +146,11 @@ switch Method.IC
         pV=0.5*var(2*LLH);
         % DIC2
         IC=MDev+pV;
-        if Method.Verbosity==2;
+        if Method.Verbosity==2
             fprintf('Done! DIC2=%d\n',IC)
         end
     case 'DIC*' % the only difference between DIC & DIC* is that DIC* gives larger penalty to model complexity
-        if Method.Verbosity==2;
+        if Method.Verbosity==2
             fprintf('\nNow start estimating DIC*... \n\n')
         end
         % get likelihood
@@ -164,11 +164,11 @@ switch Method.IC
         pD=MDev-DevM;
         % DIC*
         IC=MDev+2*pD;
-        if Method.Verbosity==2;
+        if Method.Verbosity==2
             fprintf('Done!, DIC*=%d\n', IC)
         end
     case 'WAIC1' % get watanabe-akaike information criterion
-        if Method.Verbosity==2;
+        if Method.Verbosity==2
             fprintf('\nNow start estimating WAIC1... \n\n')
         end
         % get log pointwise predictive density
@@ -178,11 +178,11 @@ switch Method.IC
         p_waic1=-2*sum(log(mean(exp(lppd),1)))+2*sum(mean(lppd,1));
         % WAIC
         IC=elppd+p_waic1;
-        if Method.Verbosity==2;
+        if Method.Verbosity==2
             fprintf('Done! WAIC1=%d\n',IC)
         end
     case 'WAIC2' % get watanabe-akaike information criterion
-        if Method.Verbosity==2;
+        if Method.Verbosity==2
             fprintf('\nNow start estimating WAIC2... \n\n')
         end
         % get log pointwise predictive density
@@ -192,11 +192,11 @@ switch Method.IC
         p_waic2=sum(var(lppd,1));
         % WAIC
         IC=elppd+p_waic2;
-        if Method.Verbosity==2;
+        if Method.Verbosity==2
             fprintf('Done! WAIC2=%d\n',IC)
         end
     case 'LME_HarmonicMean' % get log model evidence (marginal likelihood) through the generalized harmonic mean estimator
-        if Method.Verbosity==2;
+        if Method.Verbosity==2
             fprintf('\nNow estimate marginal likelihood based on the generalized harmonic mean estimator... \n\n')
         end
         % Default method (given its convenience).
@@ -246,12 +246,12 @@ switch Method.IC
             end
 
     case 'LME_BridgeSampling' % get log model evidence (marginal likelihood) through bridge sampling
-        if Method.Verbosity==2;
+        if Method.Verbosity==2
             fprintf('\nNow estimate marginal likelihood based on bridge sampling... \n\n')
         end
         % recommended method, takes time tho
         % use ML estimator to fit the proposal distribution (mvn)
-        if Method.Verbosity==2;
+        if Method.Verbosity==2
             fprintf('\nConstructing the proposal function... \n')
         end
         % get the covariance matrix of the raw posterior samples
@@ -264,7 +264,7 @@ switch Method.IC
             IDCov=IDCov+(1e-15/rcond(IDCov))*eye(length(IDCov));
         end
         [PropSamples,PropID]=randmvn(Nprop,IDMean,IDCov);
-        if Method.Verbosity==2;
+        if Method.Verbosity==2
             fprintf('Done!\n')
             fprintf('\nNow start updating the estimated marginal likelihood value... \n')
         end

@@ -74,7 +74,7 @@ function [RawSampling, Summary]=BMW_parMCMC(model, data, config)
 Nparam=size(model.Constraints.start,2); % number of dimensions
 Nchain=size(model.Constraints.start,1); % number of chains
 if ~isfield(config,'Algorithm')
-    config.Algorithm='DE'; % set DE as default algorithm
+    config.Algorithm='DE'; % set DE as default algorithm 
 end
 if ~isfield(config,'Nsample')
     config.Nsample=max(5000, 2000*Nparam); % set default number of samples after convergence

@@ -55,7 +55,8 @@ elseif iscell(Input)
         Nrepeat=size(Input,1);
         Nmodel=size(Input,2);
     end
-    Nsubj=size(Q_BMW0{1}.Param,1);
+ %   Nsubj=size(Q_BMW0{1}.Param,1);
+Nsubj=100;
 else
     error('Sorry, the input file is not valid...')
 end
@@ -229,20 +230,20 @@ for r=1:Nrepeat
                     end
                 end
             case 'DIC1'
-                delta_DIC1=zeros(Nmodel,Nmodel,Nsubj);
+               delta_DIC1=zeros(Nmodel,Nmodel,Nsubj);
                 DIC1_weight=zeros(Nmodel,Nsubj);
                 DIC1_BestModel=zeros(Nsubj,1);
-                DIC1_models=zeros(Nsubj,Nmodel);
                 for subj=1:Nsubj
+                    DIC1_models=zeros(1,Nmodel);
                     for model1=1:Nmodel
-                        DIC1_models(subj,model1)=Q_BMW{model1}.DIC1(subj);
+                        DIC1_models(model1)=Q_BMW{model1}.DIC1(subj);
                         for model2=1:Nmodel
                             delta_DIC1(model1,model2,:)=Q_BMW{model2}.DIC1-Q_BMW{model1}.DIC1;
                         end
                         delta_DIC1_benchmark=delta_DIC1(model1,:,subj)-min(delta_DIC1(model1,:,subj));
                         DIC1_weight(model1,subj)=exp(-delta_DIC1_benchmark(model1)/2)/sum(exp(-delta_DIC1_benchmark/2));
                     end
-                    DIC1_BestModel(subj)=find(DIC1_models(subj,:)==min(DIC1_models(subj,:)));
+                    DIC1_BestModel(subj)=find(DIC1_models==min(DIC1_models));
                 end
                 MC_BMW{r}.DIC1.BestModel=DIC1_BestModel;
                 MC_BMW{r}.DIC1.delta_DIC1=delta_DIC1;

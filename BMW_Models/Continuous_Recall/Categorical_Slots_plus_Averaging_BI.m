@@ -115,12 +115,12 @@ else
     period=max(error_range)-min(error_range)+error_range(2)-error_range(1);
 end
 errors=CircDist_BMW('Diff',responses,samples,period);
-errors_c=CircDist_BMW('Diff',categories,samples,period);
+errors_c=CircDist_BMW('Diff',responses,categories,period);
 if any(strcmp(Input.Variants,'Swap'))
     samples_nt=Data.sample_nt;
     categories_nt=Data.category_nt;
     errors_nt=CircDist_BMW('Diff',repmat(responses,[1,size(samples_nt,2)]),samples_nt,period);
-    errors_nt_c=CircDist_BMW('Diff',categories_nt,samples_nt,period);
+    errors_nt_c=CircDist_BMW('Diff',repmat(responses,[1,size(samples_nt,2)]),categories_nt,period);
 end
 if ~any(strcmp(Input.Variants,'ContinuousK'))
     K=floor(K); % Note that capacity is a fixed, discrete value here
@@ -231,10 +231,8 @@ if ~strcmp(Input.Output,'Prior')
                         error0=error_range(i_error)+bias;
                         conv_1=sqrt((kappa_1).^2+(kappa_r)^2+2*kappa_1*kappa_r.*cosd(error0/(period/360)));
                         conv_1_c=sqrt((kappa_c).^2+(kappa_r)^2+2*kappa_c*kappa_r.*cosd(error0/(period/360)));
-                        p_error(i_N,i_error)=(1-K/N)*1/(2*period/360)/pi+...
-                            (K/N)*(besseli(0,conv_1)./(2*pi*besseli(0,kappa_1)*besseli(0,kappa_r)));
-                        p_error_c(i_N,i_error)=(1-K/N)*1/(2*period/360)/pi+...
-                            (K/N)*(besseli(0,conv_1_c)./(2*pi*besseli(0,kappa_c)*besseli(0,kappa_r)));
+                        p_error(i_N,i_error)=besseli(0,conv_1)./(2*pi*besseli(0,kappa_1)*besseli(0,kappa_r));
+                        p_error_c(i_N,i_error)=besseli(0,conv_1_c)./(2*pi*besseli(0,kappa_c)*besseli(0,kappa_r));
                     end
                 else
                     for i_error=1:length(error_range)
@@ -267,9 +265,9 @@ if ~strcmp(Input.Output,'Prior')
                 else
                     for i_error=1:length(error_range)
                         error0=error_range(i_error)+bias;
-                        p_error(i_N,i_error)=p_low*(exp(kappa_low.*cosd(error0/(period/360)))./(2*pi*besseli(0,kappa_low)))+...
+                        p_error(i_N, i_error)=p_low*(exp(kappa_low.*cosd(error0/(period/360)))./(2*pi*besseli(0,kappa_low)))+...
                             p_high*(exp(kappa_high.*cosd(error0/(period/360)))./(2*pi*besseli(0,kappa_high)));
-                        p_error_c(i_N,i_error)=exp(kappa_c.*cosd(error0/(period/360)))./(2*pi*besseli(0,kappa_c));
+                        p_error_c(i_N, i_error)=exp(kappa_c.*cosd(error0/(period/360)))./(2*pi*besseli(0,kappa_c));
                     end
                 end
                 p_error(i_N,:)=p_error(i_N,:)/sum(p_error(i_N,:));

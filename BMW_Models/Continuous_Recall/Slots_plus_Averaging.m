@@ -81,7 +81,7 @@ else
     end
     if any(strcmp(Input.Variants,'ResponseNoise'))
         Nparam=Nparam+1;
-        kappa_r=param(3); % Response precision
+        kappa_r=param(Nparam); % Response precision
     end
     if ~any(strcmp(Input.Variants,'Bias'))
         bias=0; % Responses concentrate on samples
