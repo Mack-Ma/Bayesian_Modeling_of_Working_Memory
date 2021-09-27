@@ -70,7 +70,6 @@ ModelName=MN_Convert_BMW(MA_BMW.Model.Model);
 % Fit
 fprintf('\nSubject: %s\n','1')
 [Param0,Quality]=BMW_Fit(Data{1},Config_Fit,ModelName,MA_BMW.Constraints,MA_BMW.FitOptions);
-Ntrial=length(Data{1}.sample);
 Nparam=length(Param0);
 Param=zeros(Nsubj,Nparam);
 Param(1,:)=Param0;
@@ -94,6 +93,15 @@ if any(strcmp(MA_BMW.Criteria,'LLH')) || any(strcmp(MA_BMW.Criteria,'AIC')) || a
     fprintf('\nNow start estimating LLH/AIC/AICc/BIC...\n')
     % Calculate LLH/AIC/AICc/BIC based on maximum likelihood
     if isfield(Config_Fit,'Output') && (strcmp(Config_Fit.Output,'LLH') || (strcmp(Config_Fit.Output,'LP') && MA_BMW.FitOptions.UniformPrior==1)) % test mode
+        if isfield(Data{1},'sample')
+            Ntrial=length(Data{1}.sample);
+        elseif isfield(Data{1},'Nlure') && isfield(Data{1},'Ntarget')
+            Ntrial=sum(Data{1}.Nlure)+sum(Data{1}.Ntarget);
+        elseif isfield(Config_Fit,'Ntrial')
+            Ntrial=Config_Fit.Ntrial;
+        else
+            error("Please specify the total number of trials.")
+        end
         for subj=1:Nsubj
             fprintf('\nSubject: %s\n',num2str(subj))
             if any(strcmp(MA_BMW.Criteria,'LLH')), LLH(subj)=-Output(subj); end
@@ -105,6 +113,13 @@ if any(strcmp(MA_BMW.Criteria,'LLH')) || any(strcmp(MA_BMW.Criteria,'AIC')) || a
         fprintf('\nMaximum likelihood is required for LLH/AIC/AICc/BIC...\n')
         MoveOn=input('Do you want to fit model(s) again based on MLE? (y/n)\n','s');
         if strcmp(MoveOn,'y')
+            if isfield(Data{1},'sample')
+                Ntrial=length(Data{1}.sample);
+            elseif isfield(Config_Fit,'Ntrial')
+                Ntrial=Config_Fit.Ntrial;
+            else
+                error("Please specify the total number of trials.")
+            end
             for subj=1:Nsubj
                 fprintf('\nSubject: %s\n',num2str(subj))
                 % Fit

@@ -104,7 +104,7 @@ if ~isfield(config,'AutoParallel')
     config.AutoParallel=1;
 end
 if ~isfield(config,'GetParam')
-    config.GetParam='max';
+    config.GetParam='mean_trimmed';
 end
 if strcmp(config.Transform,'NoTransform')
     Transform=0;
